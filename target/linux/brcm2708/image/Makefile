@@ -47,11 +47,11 @@ endef
 
 ### Devices ###
 define Device/Default
-  FILESYSTEMS := ext4
   KERNEL := kernel-bin | kernel-img
   KERNEL_IMG := kernel.img
-  IMAGES := sdcard.img.gz
-  IMAGE/sdcard.img.gz := boot-img | sdcard-img | gzip | append-metadata
+  IMAGES := factory.img.gz sysupgrade.img.gz
+  IMAGE/sysupgrade.img.gz := boot-img | sdcard-img | gzip | append-metadata
+  IMAGE/factory.img.gz := boot-img | sdcard-img | gzip
 endef
 
 define Device/rpi

@@ -36,7 +36,7 @@ define Build/mkdapimg2
 	$(STAGING_DIR_HOST)/bin/mkdapimg2 \
 		-i $@ -o $@.new \
 		-s $(DAP_SIGNATURE) \
-		-v $(VERSION_DIST)-$(firstword $(subst -, ,$(REVISION))) \
+		-v $(VERSION_DIST)-$(firstword $(subst +, ,$(firstword $(subst -, ,$(REVISION))))) \
 		-r Default \
 		$(if $(1),-k $(1))
 	mv $@.new $@
@@ -334,6 +334,25 @@ define Device/e1700ac-v2-8M
 endef
 TARGET_DEVICES += e1700ac-v2-8M
 
+define Device/e558-v2-16M
+  DEVICE_TITLE := Qxwlan E558 v2 (16MB flash)
+  DEVICE_PACKAGES := kmod-usb-core kmod-usb2 -swconfig
+  BOARDNAME := E558-V2
+  SUPPORTED_DEVICES := e558-v2
+  IMAGE_SIZE := 15936k
+  MTDPARTS := spi0.0:256k(u-boot)ro,64k(u-boot-env),64k(pri-data)ro,64k(art),-(firmware)
+  IMAGE/sysupgrade.bin := append-kernel | pad-to $$$$(BLOCKSIZE) |\
+	append-rootfs | pad-rootfs | append-metadata | check-size $$$$(IMAGE_SIZE)
+endef
+TARGET_DEVICES += e558-v2-16M
+
+define Device/e558-v2-8M
+  $(Device/e558-v2-16M)
+  DEVICE_TITLE := Qxwlan E558 v2 (8MB flash)
+  IMAGE_SIZE := 7744k
+endef
+TARGET_DEVICES += e558-v2-8M
+
 define Device/e600g-v2-16M
   DEVICE_TITLE := Qxwlan E600G v2 (16MB flash)
   DEVICE_PACKAGES := kmod-usb-core kmod-usb2 -swconfig
@@ -372,6 +391,44 @@ define Device/e600gac-v2-8M
   IMAGE_SIZE := 7744k
 endef
 TARGET_DEVICES += e600gac-v2-8M
+
+define Device/e750a-v4-16M
+  DEVICE_TITLE := Qxwlan E750A v4 (16MB flash)
+  DEVICE_PACKAGES := kmod-usb-core kmod-usb2 -swconfig
+  BOARDNAME := E750A-V4
+  SUPPORTED_DEVICES := e750a-v4
+  IMAGE_SIZE := 15936k
+  MTDPARTS := spi0.0:256k(u-boot)ro,64k(u-boot-env),64k(pri-data)ro,64k(art),-(firmware)
+  IMAGE/sysupgrade.bin := append-kernel | pad-to $$$$(BLOCKSIZE) |\
+	append-rootfs | pad-rootfs | append-metadata | check-size $$$$(IMAGE_SIZE)
+endef
+TARGET_DEVICES += e750a-v4-16M
+
+define Device/e750a-v4-8M
+  $(Device/e750a-v4-16M)
+  DEVICE_TITLE := Qxwlan E750A v4 (8MB flash)
+  IMAGE_SIZE := 7744k
+endef
+TARGET_DEVICES += e750a-v4-8M
+
+define Device/e750g-v8-16M
+  DEVICE_TITLE := Qxwlan E750G v8 (16MB flash)
+  DEVICE_PACKAGES := kmod-usb-core kmod-usb2 -swconfig
+  BOARDNAME := E750G-V8
+  SUPPORTED_DEVICES := e750g-v8
+  IMAGE_SIZE := 15936k
+  MTDPARTS := spi0.0:256k(u-boot)ro,64k(u-boot-env),64k(pri-data)ro,64k(art),-(firmware)
+  IMAGE/sysupgrade.bin := append-kernel | pad-to $$$$(BLOCKSIZE) |\
+	append-rootfs | pad-rootfs | append-metadata | check-size $$$$(IMAGE_SIZE)
+endef
+TARGET_DEVICES += e750g-v8-16M
+
+define Device/e750g-v8-8M
+  $(Device/e750g-v8-16M)
+  DEVICE_TITLE := Qxwlan E750G v8 (8MB flash)
+  IMAGE_SIZE := 7744k
+endef
+TARGET_DEVICES += e750g-v8-8M
 
 define Device/ew-balin
   DEVICE_TITLE := Embedded Wireless Balin Platform
@@ -998,6 +1055,17 @@ define Device/tellstick-znet-lite
 endef
 TARGET_DEVICES += tellstick-znet-lite
 
+define Device/ts-d084
+  $(Device/tplink-8mlzma)
+  DEVICE_TITLE := PISEN TS-D084
+  DEVICE_PACKAGES := kmod-usb-core kmod-usb2
+  BOARDNAME := TS-D084
+  DEVICE_PROFILE := TSD084
+  TPLINK_HWID := 0x07030101
+  CONSOLE := ttyATH0,115200
+endef
+TARGET_DEVICES += ts-d084
+
 define Device/n5q
   DEVICE_TITLE := ALFA Network N5Q
   DEVICE_PACKAGES := rssileds -swconfig
@@ -1294,7 +1362,7 @@ endef
 define Device/fritz300e
   $(call Device/AVM)
   DEVICE_TITLE := AVM FRITZ!WLAN Repeater 300E
-  DEVICE_PACKAGES := rssileds -swconfig
+  DEVICE_PACKAGES += rssileds -swconfig
   BOARDNAME := FRITZ300E
   SUPPORTED_DEVICES := fritz300e
   IMAGE_SIZE := 15232k
@@ -1304,9 +1372,19 @@ TARGET_DEVICES += fritz300e
 define Device/fritz4020
   $(call Device/AVM)
   DEVICE_TITLE := AVM FRITZ!Box 4020
-  DEVICE_PACKAGES := kmod-usb-core kmod-usb2 kmod-usb-storage
+  DEVICE_PACKAGES += kmod-usb-core kmod-usb2 kmod-usb-storage
   BOARDNAME := FRITZ4020
   SUPPORTED_DEVICES := fritz4020
   IMAGE_SIZE := 15232k
 endef
 TARGET_DEVICES += fritz4020
+
+define Device/fritz450e
+  $(call Device/AVM)
+  DEVICE_TITLE := AVM FRITZ!WLAN Repeater 450E
+  DEVICE_PACKAGES += -swconfig
+  BOARDNAME := FRITZ450E
+  SUPPORTED_DEVICES := fritz450e
+  IMAGE_SIZE := 15232k
+endef
+TARGET_DEVICES += fritz450e
