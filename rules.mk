@@ -141,9 +141,14 @@ endif
 
 ifeq ($(or $(CONFIG_EXTERNAL_TOOLCHAIN),$(CONFIG_GCC_VERSION_4_8),$(CONFIG_TARGET_uml)),)
   iremap = -iremap$(1):$(2)
+  # just overwrite iremap for GCC 8.1 and higher to keep backward compatibility
+  ifeq ($(CONFIG_GCC_VERSION_8),y)
+    iremap = -fmacro-prefix-map=$(1)=$(2)
+  endif
 endif
 
 PACKAGE_DIR:=$(BIN_DIR)/packages
+PACKAGE_DIR_ALL:=$(TOPDIR)/staging_dir/packages/$(BOARD)
 BUILD_DIR:=$(BUILD_DIR_BASE)/$(TARGET_DIR_NAME)
 STAGING_DIR:=$(TOPDIR)/staging_dir/$(TARGET_DIR_NAME)
 BUILD_DIR_TOOLCHAIN:=$(BUILD_DIR_BASE)/$(TOOLCHAIN_DIR_NAME)
@@ -244,9 +249,9 @@ export PKG_CONFIG
 
 HOSTCC:=gcc
 HOSTCXX:=g++
-HOST_CPPFLAGS:=-I$(STAGING_DIR_HOST)/include -I$(STAGING_DIR_HOST)/usr/include $(if $(IS_PACKAGE_BUILD),-I$(STAGING_DIR_HOSTPKG)/include -I$(STAGING_DIR)/host/include)
+HOST_CPPFLAGS:=-I$(STAGING_DIR_HOST)/include $(if $(IS_PACKAGE_BUILD),-I$(STAGING_DIR_HOSTPKG)/include -I$(STAGING_DIR)/host/include)
 HOST_CFLAGS:=-O2 $(HOST_CPPFLAGS)
-HOST_LDFLAGS:=-L$(STAGING_DIR_HOST)/lib -L$(STAGING_DIR_HOST)/usr/lib $(if $(IS_PACKAGE_BUILD),-L$(STAGING_DIR_HOSTPKG)/lib -L$(STAGING_DIR)/host/lib)
+HOST_LDFLAGS:=-L$(STAGING_DIR_HOST)/lib $(if $(IS_PACKAGE_BUILD),-L$(STAGING_DIR_HOSTPKG)/lib -L$(STAGING_DIR)/host/lib)
 
 ifeq ($(CONFIG_EXTERNAL_TOOLCHAIN),)
   TARGET_AR:=$(TARGET_CROSS)gcc-ar
@@ -355,10 +360,6 @@ define shexport
 export $(call shvar,$(1))=$$(call $(1))
 endef
 
-define include_mk
-$(eval -include $(if $(DUMP),,$(STAGING_DIR)/mk/$(strip $(1))))
-endef
-
 # Execute commands under flock
 # $(1) => The shell expression.
 # $(2) => The lock name. If not given, the global lock will be used.
@@ -393,8 +394,9 @@ endef
 
 # Calculate sha256sum of any plain file within a given directory
 # $(1) => Input directory
+# $(2) => If set, recurse into subdirectories
 define sha256sums
-	(cd $(1); find . -maxdepth 1 -type f -not -name 'sha256sums' -printf "%P\n" | sort | \
+	(cd $(1); find . $(if $(2),,-maxdepth 1) -type f -not -name 'sha256sums' -printf "%P\n" | sort | \
 		xargs -r $(STAGING_DIR_HOST)/bin/mkhash -n sha256 | sed -ne 's!^\(.*\) \(.*\)$$!\1 *\2!p' > sha256sums)
 endef
 

@@ -52,6 +52,21 @@ endef
 
 $(eval $(call KernelPackage,iio-ad799x))
 
+define KernelPackage/iio-mxs-lradc
+  SUBMENU:=$(IIO_MENU)
+  DEPENDS:=@TARGET_mxs +kmod-iio-core
+  TITLE:=Freescale i.MX23/i.MX28 LRADC ADC driver
+  KCONFIG:= \
+	CONFIG_MXS_LRADC_ADC
+  FILES:=$(LINUX_DIR)/drivers/iio/adc/mxs-lradc-adc.ko
+  AUTOLOAD:=$(call AutoLoad,56,mxs-lradc-adc)
+endef
+
+define KernelPackage/iio-mxs-lradc/description
+ Support for Freescale's i.MX23/i.MX28 SoC internal Low-Resolution ADC
+endef
+
+$(eval $(call KernelPackage,iio-mxs-lradc))
 
 define KernelPackage/iio-dht11
   SUBMENU:=$(IIO_MENU)
@@ -118,3 +133,25 @@ define KernelPackage/iio-bmp280-spi/description
 endef
 
 $(eval $(call KernelPackage,iio-bmp280-spi))
+
+define KernelPackage/iio-htu21
+  SUBMENU:=$(IIO_MENU)
+  DEPENDS:=+kmod-i2c-core +kmod-iio-core
+  TITLE:=HTU21 humidity & temperature sensor
+  KCONFIG:= \
+       CONFIG_HTU21 \
+       CONFIG_IIO_MS_SENSORS_I2C
+  FILES:= \
+       $(LINUX_DIR)/drivers/iio/humidity/htu21.ko \
+       $(LINUX_DIR)/drivers/iio/common/ms_sensors/ms_sensors_i2c.ko
+  AUTOLOAD:=$(call AutoLoad,56,htu21)
+endef
+
+define KernelPackage/iio-htu21/description
+ support for the Measurement Specialties HTU21 humidity and
+ temperature sensor.
+ This driver is also used for MS8607 temperature, pressure & humidity
+ sensor
+endef
+
+$(eval $(call KernelPackage,iio-htu21))

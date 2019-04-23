@@ -10,7 +10,7 @@ include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=ppp
 PKG_VERSION:=2.4.7
-PKG_RELEASE:=12
+PKG_RELEASE:=13
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_URL:=https://download.samba.org/pub/ppp/
@@ -178,14 +178,19 @@ $(call Build/Configure/Default,, \
 	UNAME_M="$(ARCH)" \
 )
 	mkdir -p $(PKG_BUILD_DIR)/pppd/plugins/pppoatm/linux
-	cp \
+	$(CP) \
 		$(LINUX_DIR)/include/linux/compiler.h \
 		$(LINUX_DIR)/include/$(LINUX_UAPI_DIR)linux/atm*.h \
 		$(PKG_BUILD_DIR)/pppd/plugins/pppoatm/linux/
+
+	# Kernel 4.14.9+ only, ignore the exit status of cp in case the file
+	# doesn't exits
+	-$(CP) $(LINUX_DIR)/include/linux/compiler_types.h \
+		$(PKG_BUILD_DIR)/pppd/plugins/pppoatm/linux/
 endef
 
-TARGET_CFLAGS += -ffunction-sections -fdata-sections
-TARGET_LDFLAGS += -Wl,--gc-sections
+TARGET_CFLAGS += -ffunction-sections -fdata-sections -flto
+TARGET_LDFLAGS += -Wl,--gc-sections -flto -fuse-linker-plugin
 
 MAKE_FLAGS += COPTS="$(TARGET_CFLAGS)" \
 		PRECOMPILED_FILTER=1 \
