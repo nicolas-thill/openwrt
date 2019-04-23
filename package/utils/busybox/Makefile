@@ -9,7 +9,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=busybox
 PKG_VERSION:=1.27.2
-PKG_RELEASE:=1
+PKG_RELEASE:=2
 PKG_FLAGS:=essential
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.bz2
@@ -23,6 +23,7 @@ PKG_CHECK_FORMAT_SECURITY:=0
 
 PKG_LICENSE:=GPL-2.0
 PKG_LICENSE_FILES:=LICENSE archival/libarchive/bz/LICENSE
+PKG_CPE_ID:=cpe:/a:busybox:busybox
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -47,6 +48,7 @@ define Package/busybox
   URL:=http://busybox.net/
   DEPENDS:=+BUSYBOX_USE_LIBRPC:librpc +BUSYBOX_CONFIG_PAM:libpam +BUSYBOX_CONFIG_NTPD:jsonfilter
   MENU:=1
+  PROVIDES:=ip
   ALTERNATIVES:=\
     $(call BUSYBOX_IF_ENABLED,KILL,	100:/bin/kill:/bin/busybox) \
     $(call BUSYBOX_IF_ENABLED,PS,	100:/bin/ps:/bin/busybox) \
@@ -99,7 +101,7 @@ ifdef CONFIG_BUSYBOX_CONFIG_PAM
   LDLIBS += pam pam_misc pthread
 endif
 
-ifdef CONFIG_BUSYBOX_DEFAULT_NSLOOKUP_LEDE
+ifdef CONFIG_BUSYBOX_DEFAULT_NSLOOKUP_OPENWRT
   ifeq ($(CONFIG_USE_GLIBC),y)
 	LDLIBS += resolv
   endif

@@ -24,6 +24,7 @@
 		power {
 			label = "c20:blue:power";
 			gpios = <&gpio0 7 GPIO_ACTIVE_LOW>;
+			default-state = "keep";
 		};
 
 		usb {
@@ -141,11 +142,6 @@
 			ralink,group = "i2c", "uartf", "wled", "ephy", "spi refclk", "wdt";
 			ralink,function = "gpio";
 		};
-
-		pa {
-			ralink,group = "pa";
-			ralink,function = "pa";
-		};
 	};
 };
 
@@ -171,6 +167,8 @@
 	ralink,mtd-eeprom = <&radio 0>;
 	mtd-mac-address = <&rom 0xf100>;
 	mtd-mac-address-increment = <(-2)>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pa_pins>;
 };
 
 &pcie {
