@@ -24,29 +24,6 @@
 			debounce-interval = <60>;
 		};
 	};
-
-	leds {
-		compatible = "gpio-leds";
-		link1 {
-			label = "ubnt:red:link1";
-			gpios = <&gpio 0 GPIO_ACTIVE_HIGH>;
-		};
-
-		link2 {
-			label = "ubnt:orange:link2";
-			gpios = <&gpio 1 GPIO_ACTIVE_HIGH>;
-		};
-
-		link3 {
-			label = "ubnt:green:link3";
-			gpios = <&gpio 11 GPIO_ACTIVE_HIGH>;
-		};
-
-		link4 {
-			label = "ubnt:green:link4";
-			gpios = <&gpio 7 GPIO_ACTIVE_HIGH>;
-		};
-	};
 };
 
 &uart {
@@ -83,6 +60,7 @@
 			};
 
 			partition@2 {
+				compatible = "denx,uimage";
 				label = "firmware";
 				reg = <0x050000 0x750000>;
 			};

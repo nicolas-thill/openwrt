@@ -12,7 +12,7 @@ include $(INCLUDE_DIR)/version.mk
 include $(INCLUDE_DIR)/feeds.mk
 
 PKG_NAME:=base-files
-PKG_RELEASE:=195
+PKG_RELEASE:=196
 PKG_FLAGS:=nonshared
 
 PKG_FILE_DEPENDS:=$(PLATFORM_DIR)/ $(GENERIC_PLATFORM_DIR)/base-files/
@@ -49,6 +49,7 @@ define Package/base-files/conffiles
 /etc/config/system
 /etc/crontabs/
 /etc/dropbear/
+/etc/ethers
 /etc/group
 /etc/hosts
 /etc/inittab
@@ -194,6 +195,8 @@ define Package/base-files/install
 		mkdir -p $(1)/etc/opkg; \
 		$(call FeedSourcesAppend,$(1)/etc/opkg/distfeeds.conf); \
 		$(VERSION_SED_SCRIPT) $(1)/etc/opkg/distfeeds.conf)
+	$(if $(CONFIG_IPK_FILES_CHECKSUMS), \
+		rm -f $(1)/sbin/pkg_check,)
 endef
 
 ifneq ($(DUMP),1)

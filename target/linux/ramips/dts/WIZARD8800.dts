@@ -47,6 +47,7 @@
 			};
 
 			partition@50000 {
+				compatible = "denx,uimage";
 				label = "firmware";
 				reg = <0x50000 0x7b0000>;
 			};
@@ -57,7 +58,7 @@
 &pinctrl {
 	state_default: pinctrl0 {
 		gpio {
-			ralink,group = "i2c", "jtag", "rgmii", "mdio", "uartf";
+			ralink,group = "i2c", "jtag", "uartf";
 			ralink,function = "gpio";
 		};
 	};

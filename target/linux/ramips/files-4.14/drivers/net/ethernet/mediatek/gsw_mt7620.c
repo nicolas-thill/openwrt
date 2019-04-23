@@ -69,6 +69,9 @@ static int mt7620_mdio_mode(struct device_node *eth_node)
 	mdiobus_node = of_get_child_by_name(eth_node, "mdio-bus");
 
 	if (mdiobus_node) {
+		if (of_property_read_bool(mdiobus_node, "mediatek,mdio-mode"))
+			ret = 1;
+
 		for_each_child_of_node(mdiobus_node, phy_node) {
 			id = of_get_property(phy_node, "reg", NULL);
 			if (id && (be32_to_cpu(*id) == 0x1f))
@@ -154,13 +157,12 @@ static void mt7620_hw_init(struct mt7620_gsw *gsw, int mdio_mode)
 		_mt7620_mii_write(gsw, 1, 31, 0x1000);
 		_mt7620_mii_write(gsw, 1, 17, 0xe7f8);
 
-	/* turn on all PHYs */
-	for (i = 0; i <= 4; i++) {
-		val = _mt7620_mii_read(gsw, i, 0);
-		val &= ~BIT(11);
-		_mt7620_mii_write(gsw, i, 0, val);
-	}
-
+		/* turn on all PHYs */
+		for (i = 0; i <= 4; i++) {
+			val = _mt7620_mii_read(gsw, i, 0);
+			val &= ~BIT(11);
+			_mt7620_mii_write(gsw, i, 0, val);
+		}
 	}
 
 	/* global page 0 */

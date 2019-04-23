@@ -97,9 +97,27 @@ board=$(board_name)
 case "$FIRMWARE" in
 "ath9k-eeprom-ahb-18100000.wmac.bin")
 	case $board in
-	iodata,wn-ac1600dgr2)
+	avm,fritz4020)
+		ath9k_eeprom_extract_reverse "urlader" 5441 1088
+		;;
+	dlink,dir-825-c1|\
+	dlink,dir-835-a1)
+		ath9k_eeprom_extract "art" 4096 1088
+		ath9k_patch_fw_mac_crc $(mtd_get_mac_text "mac" 4) 2
+		;;
+	dlink,dir-859-a1)
+		ath9k_eeprom_extract "art" 4096 1088
+		ath9k_patch_fw_mac $(mtd_get_mac_ascii devdata "wlan24mac") 2
+		;;
+	iodata,wn-ac1167dgr|\
+	iodata,wn-ac1600dgr2|\
+	iodata,wn-ag300dgr)
 		ath9k_eeprom_extract "art" 4096 1088
 		ath9k_patch_fw_mac $(mtd_get_mac_ascii u-boot-env ethaddr) 2
+		;;
+	nec,wg800hp)
+		ath9k_eeprom_extract "art" 4096 1088
+		ath9k_patch_fw_mac $(mtd_get_mac_text board_data 1664) 2
 		;;
 	*)
 		ath9k_eeprom_die "board $board is not supported yet"
@@ -111,10 +129,25 @@ case "$FIRMWARE" in
 	avm,fritz300e)
 		ath9k_eeprom_extract_reverse "urloader" 5441 1088
 		;;
+	buffalo,whr-g301n|\
+	buffalo,wzr-hp-g302h-a1a0|\
+	tplink,tl-wr841-v5|\
+	tplink,tl-wr941-v4)
+		ath9k_eeprom_extract "art" 4096 3768
+		;;
+	buffalo,wzr-hp-g450h)
+		ath9k_eeprom_extract "ART" 4096 1088
+		;;
+	dlink,dir-825-c1|\
+	dlink,dir-835-a1)
+		ath9k_eeprom_extract "art" 20480 1088
+		ath9k_patch_fw_mac_crc $(macaddr_add $(mtd_get_mac_text "mac" 24) 1) 2
+		;;
 	ocedo,raccoon|\
 	tplink,tl-wdr3600|\
 	tplink,tl-wdr4300|\
-	tplink,tl-wdr4900-v2)
+	tplink,tl-wdr4900-v2|\
+	winchannel,wb2000)
 		ath9k_eeprom_extract "art" 20480 1088
 		;;
 	netgear,wnr612-v2|\
@@ -128,12 +161,22 @@ case "$FIRMWARE" in
 	tplink,tl-wr741-v1|\
 	tplink,tl-wr743nd-v1|\
 	tplink,tl-wr841-v7|\
+	tplink,tl-wr842n-v1|\
+	ubnt,airrouter|\
+	ubnt,bullet-m|\
+	ubnt,nano-m|\
+	ubnt,rocket-m)
+		ath9k_eeprom_extract "art" 4096 4096
+		;;
+	pqi,air-pen)
+		ath9k_eeprom_extract "art" 4096 2002
+		;;
 	ubnt,unifi)
 		ath9k_eeprom_extract "art" 4096 2048
 		;;
-	tplink,tl-wr841-v5|\
-	tplink,tl-wr941-v4)
-		ath9k_eeprom_extract "art" 4096 3768
+	wd,mynet-wifi-rangeextender)
+		ath9k_eeprom_extract "art" 4096 4096
+		ath9k_patch_fw_mac_crc $(nvram get wl0_hwaddr) "$mac" 2
 		;;
 	*)
 		ath9k_eeprom_die "board $board is not supported yet"
@@ -142,14 +185,15 @@ case "$FIRMWARE" in
 	;;
 "ath9k-eeprom-pci-0000:00:11.0.bin")
 	case $board in
-	dlink,dir-825-b1)
-		ath9k_eeprom_extract "caldata" 4096 3768
-		ath9k_patch_fw_mac_crc $(mtd_get_mac_text "caldata" 65440) 524
-		;;
+	buffalo,wzr-hp-ag300h|\
 	netgear,wndr3700|\
 	netgear,wndr3700v2|\
 	netgear,wndr3800)
 		ath9k_eeprom_extract "art" 4096 3768
+		;;
+	dlink,dir-825-b1)
+		ath9k_eeprom_extract "caldata" 4096 3768
+		ath9k_patch_fw_mac_crc $(mtd_get_mac_text "caldata" 65440) 524
 		;;
 	*)
 		ath9k_eeprom_die "board $board is not supported yet"
@@ -158,14 +202,15 @@ case "$FIRMWARE" in
 	;;
 "ath9k-eeprom-pci-0000:00:12.0.bin")
 	case $board in
-	dlink,dir-825-b1)
-		ath9k_eeprom_extract "caldata" 20480 3768
-		ath9k_patch_fw_mac_crc $(macaddr_add $(mtd_get_mac_text "caldata" 65460) 1) 524
-		;;
+	buffalo,wzr-hp-ag300h|\
 	netgear,wndr3700|\
 	netgear,wndr3700v2|\
 	netgear,wndr3800)
 		ath9k_eeprom_extract "art" 20480 3768
+		;;
+	dlink,dir-825-b1)
+		ath9k_eeprom_extract "caldata" 20480 3768
+		ath9k_patch_fw_mac_crc $(macaddr_add $(mtd_get_mac_text "caldata" 65460) 1) 524
 		;;
 	*)
 		ath9k_eeprom_die "board $board is not supported yet"

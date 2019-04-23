@@ -35,7 +35,6 @@
 			label = "gl-mt300a:usb";
 			gpios = <&gpio0 7 GPIO_ACTIVE_LOW>;
 		};
-
 	};
 
 	gpio-keys-polled {
@@ -58,7 +57,7 @@
 			gpios = <&gpio0 2 GPIO_ACTIVE_LOW>;
 			linux,code = <BTN_1>;
 		};
- 	};
+	};
 };
 
 &gpio0 {
@@ -108,6 +107,7 @@
 			};
 
 			partition@50000 {
+				compatible = "denx,uimage";
 				label = "firmware";
 				reg = <0x50000 0xf80000>;
 			};

@@ -9,9 +9,9 @@
 include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/kernel.mk
 
-PKG_VERSION:=2018.05
+PKG_VERSION:=2018.11
 
-PKG_HASH:=4da13c2a6139a78cc08608f21fd4741db27eda336cfad7ab8264fda923b9c048
+PKG_HASH:=737c93f2ea03fec669e840dbee32bcf6238e6924ff5f20e4f1c472ee24e5d37e
 
 PKG_MAINTAINER:=Zoltan HERPAI <wigyori@uid0.hu>
 
@@ -150,6 +150,12 @@ define U-Boot/orangepi_r1
   BUILD_DEVICES:=sun8i-h2-plus-orangepi-r1
 endef
 
+define U-Boot/orangepi_zero
+  BUILD_SUBTARGET:=cortexa7
+  NAME:=Orange Pi Zero (H2+)
+  BUILD_DEVICES:=sun8i-h2-plus-orangepi-zero
+endef
+
 define U-Boot/orangepi_pc
   BUILD_SUBTARGET:=cortexa7
   NAME:=Orange Pi PC (H3)
@@ -179,6 +185,14 @@ define U-Boot/nanopi_neo_plus2
   NAME:=NanoPi NEO Plus2 (H5)
   BUILD_DEVICES:=sun50i-h5-nanopi-neo-plus2
   DEPENDS:=+PACKAGE_u-boot-nanopi_neo_plus2:arm-trusted-firmware-sunxi
+  UENV:=a64
+endef
+
+define U-Boot/nanopi_neo2
+  BUILD_SUBTARGET:=cortexa53
+  NAME:=NanoPi NEO2 (H5)
+  BUILD_DEVICES:=sun50i-h5-nanopi-neo2
+  DEPENDS:=+PACKAGE_u-boot-nanopi_neo2:arm-trusted-firmware-sunxi
   UENV:=a64
 endef
 
@@ -237,6 +251,8 @@ UBOOT_TARGETS := \
 	nanopi_m1_plus \
 	nanopi_neo \
 	nanopi_neo_plus2 \
+	nanopi_neo2 \
+	orangepi_zero \
 	orangepi_r1 \
 	orangepi_pc \
 	orangepi_plus \
