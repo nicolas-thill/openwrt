@@ -6,7 +6,7 @@
 #include <dt-bindings/input/input.h>
 
 / {
-	compatible = "ralink,rt5350-soc";
+	compatible = "dlink,dwr-512-b", "ralink,rt5350-soc";
 	model = "D-Link DWR-512 B";
 
 	gpio-keys-polled {
@@ -17,7 +17,7 @@
 
 		wps {
 			label = "wps";
-			gpios = <&gpio0 0 GPIO_ACTIVE_LOW>;
+			gpios = <&gpio0 7 GPIO_ACTIVE_LOW>;
 			linux,code = <KEY_WPS_BUTTON>;
 		};
 
@@ -33,7 +33,7 @@
 
 		sms {
 			label = "dwr-512-b:green:sms";
-			gpios = <&gpio0 8 GPIO_ACTIVE_LOW>;
+			gpios = <&gpio0 8 GPIO_ACTIVE_HIGH>;
 		};
 		status {
 			label = "dwr-512-b:green:status";
@@ -61,6 +61,10 @@
 		compatible = "gpio-export";
 		#size-cells = <0>;
 
+		slic_int {
+			gpio-export,name = "slic_int";
+			gpios = <&gpio0 1 GPIO_ACTIVE_LOW>;
+		};
 		modem3g_enable {
 			gpio-export,name = "modem3g_enable";
 			gpio-export,output = <1>;

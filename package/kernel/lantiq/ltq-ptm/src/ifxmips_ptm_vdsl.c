@@ -289,7 +289,11 @@ static int ptm_hard_start_xmit(struct sk_buff *skb, struct net_device *dev)
     /*  allocate descriptor */
     desc_base = get_tx_desc(0, &f_full);
     if ( f_full ) {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,7,0)
+        netif_trans_update(dev);
+#else
         dev->trans_start = jiffies;
+#endif
         netif_stop_queue(dev);
 
         IFX_REG_W32_MASK(0, 1 << 17, MBOX_IGU1_ISRC);
@@ -348,7 +352,11 @@ static int ptm_hard_start_xmit(struct sk_buff *skb, struct net_device *dev)
     wmb();
     *(volatile unsigned int *)desc = *(unsigned int *)&reg_desc;
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,7,0)
+    netif_trans_update(dev);
+#else
     dev->trans_start = jiffies;
+#endif
 
     return 0;
 
@@ -1014,7 +1022,10 @@ static int ifx_ptm_init(void)
     enable_irq(PPE_MAILBOX_IGU1_INT);
 
     ifx_mei_atm_showtime_check(&g_showtime, &port_cell, &g_xdata_addr);
-    
+    if ( g_showtime ) {
+	ptm_showtime_enter(&port_cell, &g_xdata_addr);
+    }
+
     ifx_mei_atm_showtime_enter = ptm_showtime_enter;
     ifx_mei_atm_showtime_exit  = ptm_showtime_exit;
 

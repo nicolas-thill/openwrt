@@ -1,11 +1,11 @@
 #!/bin/sh
 # Copyright (C) 2014 OpenWrt.org
 
+. /lib/functions.sh
 . /lib/functions/leds.sh
-. /lib/kirkwood.sh
 
 get_status_led() {
-	case $(kirkwood_board_name) in
+	case $(board_name) in
 	dockstar|\
 	goflexhome|\
 	goflexnet)
@@ -19,6 +19,12 @@ get_status_led() {
 		;;
 	linksys-viper)
 		status_led="viper:white:health"
+		;;
+	nsa310b)
+		status_led="nsa310:green:sys"
+		;;
+	on100)
+		status_led="on100:green:health"
 		;;
 	esac
 }

@@ -69,7 +69,7 @@ static struct mtd_partition rbsxtlite_nand_partitions[] = {
 		.size   = (4 * 1024 * 1024) - (256 * 1024),
 	},
 	{
-		.name   = "rootfs",
+		.name   = "ubi",
 		.offset = MTDPART_OFS_NXTBLK,
 		.size   = MTDPART_SIZ_FULL,
 	},
@@ -109,6 +109,7 @@ static struct gpio_led rbsxtlite_leds_gpio[] __initdata = {
 	{
 		.name		=	"rb:green:power",
 		.gpio		=	SXTLITE_GPIO_LED_POWER,
+		.default_state	=	LEDS_GPIO_DEFSTATE_KEEP,
 	},
 };
 
@@ -230,9 +231,9 @@ static void __init rbsxtlite_setup(void)
 }
 
 
-MIPS_MACHINE(ATH79_MACH_RB_SXTLITE2ND, "sxt2n", "Mikrotik RouterBOARD SXT Lite2",
+MIPS_MACHINE(ATH79_MACH_RB_SXTLITE2ND, "sxt2n", "MikroTik RouterBOARD SXT Lite2",
 	    rbsxtlite_setup);
 
-MIPS_MACHINE(ATH79_MACH_RB_SXTLITE5ND, "sxt5n", "Mikrotik RouterBOARD SXT Lite5",
+MIPS_MACHINE(ATH79_MACH_RB_SXTLITE5ND, "sxt5n", "MikroTik RouterBOARD SXT Lite5",
 	    rbsxtlite_setup);
 
