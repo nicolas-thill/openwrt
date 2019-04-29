@@ -3801,35 +3801,6 @@
   UNWIND(.fnend		)
  ENDPROC(ret_fast_syscall)
  
---- a/arch/arm/kernel/patch.c
-+++ b/arch/arm/kernel/patch.c
-@@ -16,7 +16,7 @@ struct patch {
- 	unsigned int insn;
- };
- 
--static DEFINE_SPINLOCK(patch_lock);
-+static DEFINE_RAW_SPINLOCK(patch_lock);
- 
- static void __kprobes *patch_map(void *addr, int fixmap, unsigned long *flags)
- 	__acquires(&patch_lock)
-@@ -33,7 +33,7 @@ static void __kprobes *patch_map(void *a
- 		return addr;
- 
- 	if (flags)
--		spin_lock_irqsave(&patch_lock, *flags);
-+		raw_spin_lock_irqsave(&patch_lock, *flags);
- 	else
- 		__acquire(&patch_lock);
- 
-@@ -48,7 +48,7 @@ static void __kprobes patch_unmap(int fi
- 	clear_fixmap(fixmap);
- 
- 	if (flags)
--		spin_unlock_irqrestore(&patch_lock, *flags);
-+		raw_spin_unlock_irqrestore(&patch_lock, *flags);
- 	else
- 		__release(&patch_lock);
- }
 --- a/arch/arm/kernel/process.c
 +++ b/arch/arm/kernel/process.c
 @@ -325,6 +325,30 @@ unsigned long arch_randomize_brk(struct
@@ -16495,7 +16466,7 @@
  	timer->function = perf_mux_hrtimer_handler;
  }
  
-@@ -8770,7 +8770,7 @@ static void perf_swevent_init_hrtimer(st
+@@ -8772,7 +8772,7 @@ static void perf_swevent_init_hrtimer(st
  	if (!is_sampling_event(event))
  		return;
  
