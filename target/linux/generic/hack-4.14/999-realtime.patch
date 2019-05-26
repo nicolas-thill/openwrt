@@ -6052,7 +6052,7 @@
  
 --- a/arch/x86/entry/common.c
 +++ b/arch/x86/entry/common.c
-@@ -133,7 +133,7 @@ static long syscall_trace_enter(struct p
+@@ -134,7 +134,7 @@ static long syscall_trace_enter(struct p
  
  #define EXIT_TO_USERMODE_LOOP_FLAGS				\
  	(_TIF_SIGPENDING | _TIF_NOTIFY_RESUME | _TIF_UPROBE |	\
@@ -6061,7 +6061,7 @@
  
  static void exit_to_usermode_loop(struct pt_regs *regs, u32 cached_flags)
  {
-@@ -148,9 +148,16 @@ static void exit_to_usermode_loop(struct
+@@ -149,9 +149,16 @@ static void exit_to_usermode_loop(struct
  		/* We have work to do. */
  		local_irq_enable();
  
@@ -6151,8 +6151,8 @@
  idtentry hypervisor_callback xen_do_hypervisor_callback has_error_code=0
 --- a/arch/x86/include/asm/fpu/api.h
 +++ b/arch/x86/include/asm/fpu/api.h
-@@ -25,6 +25,7 @@ extern void __kernel_fpu_begin(void);
- extern void __kernel_fpu_end(void);
+@@ -20,6 +20,7 @@
+  */
  extern void kernel_fpu_begin(void);
  extern void kernel_fpu_end(void);
 +extern void kernel_fpu_resched(void);
@@ -6607,7 +6607,7 @@
  	return 0;
 --- a/arch/x86/kernel/fpu/core.c
 +++ b/arch/x86/kernel/fpu/core.c
-@@ -138,6 +138,18 @@ void kernel_fpu_end(void)
+@@ -136,6 +136,18 @@ void kernel_fpu_end(void)
  }
  EXPORT_SYMBOL_GPL(kernel_fpu_end);
  
@@ -6716,7 +6716,7 @@
  	 * This must be done before restoring TLS segments so
 --- a/arch/x86/kvm/lapic.c
 +++ b/arch/x86/kvm/lapic.c
-@@ -2136,7 +2136,7 @@ int kvm_create_lapic(struct kvm_vcpu *vc
+@@ -2138,7 +2138,7 @@ int kvm_create_lapic(struct kvm_vcpu *vc
  	apic->vcpu = vcpu;
  
  	hrtimer_init(&apic->lapic_timer.timer, CLOCK_MONOTONIC,
@@ -8818,7 +8818,7 @@
  }
  
  static void protection_domain_free(struct protection_domain *domain)
-@@ -3613,14 +3604,62 @@ static void set_dte_irq_entry(u16 devid,
+@@ -3616,14 +3607,62 @@ static void set_dte_irq_entry(u16 devid,
  	amd_iommu_dev_table[devid].data[2] = dte;
  }
  
@@ -8883,7 +8883,7 @@
  
  	iommu = amd_iommu_rlookup_table[devid];
  	if (!iommu)
-@@ -3633,60 +3672,45 @@ static struct irq_remap_table *get_irq_t
+@@ -3636,60 +3675,45 @@ static struct irq_remap_table *get_irq_t
  	alias = amd_iommu_alias_table[devid];
  	table = irq_lookup_table[alias];
  	if (table) {
@@ -8969,7 +8969,7 @@
  	return table;
  }
  
-@@ -3700,11 +3724,11 @@ static int alloc_irq_index(u16 devid, in
+@@ -3703,11 +3727,11 @@ static int alloc_irq_index(u16 devid, in
  	if (!iommu)
  		return -ENODEV;
  
@@ -8983,7 +8983,7 @@
  
  	/* Scan table for free entries */
  	for (c = 0, index = table->min_index;
-@@ -3727,7 +3751,7 @@ static int alloc_irq_index(u16 devid, in
+@@ -3730,7 +3754,7 @@ static int alloc_irq_index(u16 devid, in
  	index = -ENOSPC;
  
  out:
@@ -8992,7 +8992,7 @@
  
  	return index;
  }
-@@ -3744,11 +3768,11 @@ static int modify_irte_ga(u16 devid, int
+@@ -3747,11 +3771,11 @@ static int modify_irte_ga(u16 devid, int
  	if (iommu == NULL)
  		return -EINVAL;
  
@@ -9006,7 +9006,7 @@
  
  	entry = (struct irte_ga *)table->table;
  	entry = &entry[index];
-@@ -3759,7 +3783,7 @@ static int modify_irte_ga(u16 devid, int
+@@ -3762,7 +3786,7 @@ static int modify_irte_ga(u16 devid, int
  	if (data)
  		data->ref = entry;
  
@@ -9015,7 +9015,7 @@
  
  	iommu_flush_irt(iommu, devid);
  	iommu_completion_wait(iommu);
-@@ -3777,13 +3801,13 @@ static int modify_irte(u16 devid, int in
+@@ -3780,13 +3804,13 @@ static int modify_irte(u16 devid, int in
  	if (iommu == NULL)
  		return -EINVAL;
  
@@ -9032,7 +9032,7 @@
  
  	iommu_flush_irt(iommu, devid);
  	iommu_completion_wait(iommu);
-@@ -3801,13 +3825,13 @@ static void free_irte(u16 devid, int ind
+@@ -3804,13 +3828,13 @@ static void free_irte(u16 devid, int ind
  	if (iommu == NULL)
  		return;
  
@@ -9049,7 +9049,7 @@
  
  	iommu_flush_irt(iommu, devid);
  	iommu_completion_wait(iommu);
-@@ -3888,10 +3912,8 @@ static void irte_ga_set_affinity(void *e
+@@ -3891,10 +3915,8 @@ static void irte_ga_set_affinity(void *e
  				 u8 vector, u32 dest_apicid)
  {
  	struct irte_ga *irte = (struct irte_ga *) entry;
@@ -9061,7 +9061,7 @@
  		irte->hi.fields.vector = vector;
  		irte->lo.fields_remap.destination = dest_apicid;
  		modify_irte_ga(devid, index, irte, NULL);
-@@ -4097,7 +4119,7 @@ static int irq_remapping_alloc(struct ir
+@@ -4100,7 +4122,7 @@ static int irq_remapping_alloc(struct ir
  	struct amd_ir_data *data = NULL;
  	struct irq_cfg *cfg;
  	int i, ret, devid;
@@ -9070,7 +9070,7 @@
  
  	if (!info)
  		return -EINVAL;
-@@ -4121,10 +4143,26 @@ static int irq_remapping_alloc(struct ir
+@@ -4124,10 +4146,26 @@ static int irq_remapping_alloc(struct ir
  		return ret;
  
  	if (info->type == X86_IRQ_ALLOC_TYPE_IOAPIC) {
@@ -9100,7 +9100,7 @@
  	} else {
  		index = alloc_irq_index(devid, nr_irqs);
  	}
-@@ -4368,7 +4406,7 @@ int amd_iommu_update_ga(int cpu, bool is
+@@ -4371,7 +4409,7 @@ int amd_iommu_update_ga(int cpu, bool is
  {
  	unsigned long flags;
  	struct amd_iommu *iommu;
@@ -9109,7 +9109,7 @@
  	struct amd_ir_data *ir_data = (struct amd_ir_data *)data;
  	int devid = ir_data->irq_2_irte.devid;
  	struct irte_ga *entry = (struct irte_ga *) ir_data->entry;
-@@ -4382,11 +4420,11 @@ int amd_iommu_update_ga(int cpu, bool is
+@@ -4385,11 +4423,11 @@ int amd_iommu_update_ga(int cpu, bool is
  	if (!iommu)
  		return -ENODEV;
  
@@ -9124,7 +9124,7 @@
  
  	if (ref->lo.fields_vapic.guest_mode) {
  		if (cpu >= 0)
-@@ -4395,7 +4433,7 @@ int amd_iommu_update_ga(int cpu, bool is
+@@ -4398,7 +4436,7 @@ int amd_iommu_update_ga(int cpu, bool is
  		barrier();
  	}
  
@@ -9146,7 +9146,7 @@
  	list_add_tail(&iommu->list, &amd_iommu_list);
 --- a/drivers/iommu/amd_iommu_types.h
 +++ b/drivers/iommu/amd_iommu_types.h
-@@ -406,7 +406,7 @@ extern bool amd_iommu_iotlb_sup;
+@@ -408,7 +408,7 @@ extern bool amd_iommu_iotlb_sup;
  #define IRQ_TABLE_ALIGNMENT	128
  
  struct irq_remap_table {
@@ -9155,7 +9155,7 @@
  	unsigned min_index;
  	u32 *table;
  };
-@@ -488,7 +488,7 @@ struct amd_iommu {
+@@ -490,7 +490,7 @@ struct amd_iommu {
  	int index;
  
  	/* locks the accesses to the hardware */
@@ -9164,7 +9164,7 @@
  
  	/* Pointer to PCI device of this IOMMU */
  	struct pci_dev *dev;
-@@ -625,7 +625,7 @@ struct devid_map {
+@@ -627,7 +627,7 @@ struct devid_map {
   */
  struct iommu_dev_data {
  	struct list_head list;		  /* For domain->dev_list */
@@ -9408,7 +9408,7 @@
  }
  
  static void free_stripe(struct kmem_cache *sc, struct stripe_head *sh)
-@@ -6785,6 +6787,7 @@ static int raid456_cpu_up_prepare(unsign
+@@ -6774,6 +6776,7 @@ static int raid456_cpu_up_prepare(unsign
  			__func__, cpu);
  		return -ENOMEM;
  	}
@@ -9416,7 +9416,7 @@
  	return 0;
  }
  
-@@ -6795,7 +6798,6 @@ static int raid5_alloc_percpu(struct r5c
+@@ -6784,7 +6787,6 @@ static int raid5_alloc_percpu(struct r5c
  	conf->percpu = alloc_percpu(struct raid5_percpu);
  	if (!conf->percpu)
  		return -ENOMEM;
@@ -11682,7 +11682,7 @@
  /**
 --- a/include/linux/cpu.h
 +++ b/include/linux/cpu.h
-@@ -120,6 +120,8 @@ extern void cpu_hotplug_disable(void);
+@@ -122,6 +122,8 @@ extern void cpu_hotplug_disable(void);
  extern void cpu_hotplug_enable(void);
  void clear_tasks_mm_cpumask(int cpu);
  int cpu_down(unsigned int cpu);
@@ -11691,7 +11691,7 @@
  
  #else /* CONFIG_HOTPLUG_CPU */
  
-@@ -130,6 +132,9 @@ static inline void cpus_read_unlock(void
+@@ -132,6 +134,9 @@ static inline void cpus_read_unlock(void
  static inline void lockdep_assert_cpus_held(void) { }
  static inline void cpu_hotplug_disable(void) { }
  static inline void cpu_hotplug_enable(void) { }
@@ -16786,7 +16786,7 @@
  			put_pi_state(pi_state);
  			continue;
  		}
-@@ -1490,6 +1492,7 @@ static int wake_futex_pi(u32 __user *uad
+@@ -1492,6 +1494,7 @@ static int wake_futex_pi(u32 __user *uad
  	struct task_struct *new_owner;
  	bool postunlock = false;
  	DEFINE_WAKE_Q(wake_q);
@@ -16828,7 +16828,7 @@
  			} else if (ret) {
  				/*
  				 * rt_mutex_start_proxy_lock() detected a
-@@ -2702,10 +2715,9 @@ static int futex_wait(u32 __user *uaddr,
+@@ -2719,10 +2732,9 @@ static int futex_wait(u32 __user *uaddr,
  	if (abs_time) {
  		to = &timeout;
  
@@ -16842,7 +16842,7 @@
  		hrtimer_set_expires_range_ns(&to->timer, *abs_time,
  					     current->timer_slack_ns);
  	}
-@@ -2804,9 +2816,8 @@ static int futex_lock_pi(u32 __user *uad
+@@ -2821,9 +2833,8 @@ static int futex_lock_pi(u32 __user *uad
  
  	if (time) {
  		to = &timeout;
@@ -16854,7 +16854,7 @@
  		hrtimer_set_expires(&to->timer, *time);
  	}
  
-@@ -2861,7 +2872,7 @@ retry_private:
+@@ -2878,7 +2889,7 @@ retry_private:
  		goto no_block;
  	}
  
@@ -16863,7 +16863,7 @@
  
  	/*
  	 * On PREEMPT_RT_FULL, when hb->lock becomes an rt_mutex, we must not
-@@ -2877,6 +2888,14 @@ retry_private:
+@@ -2894,6 +2905,14 @@ retry_private:
  	 * before __rt_mutex_start_proxy_lock() is done.
  	 */
  	raw_spin_lock_irq(&q.pi_state->pi_mutex.wait_lock);
@@ -16878,7 +16878,7 @@
  	spin_unlock(q.lock_ptr);
  	/*
  	 * __rt_mutex_start_proxy_lock() unconditionally enqueues the @rt_waiter
-@@ -2885,6 +2904,7 @@ retry_private:
+@@ -2902,6 +2921,7 @@ retry_private:
  	 */
  	ret = __rt_mutex_start_proxy_lock(&q.pi_state->pi_mutex, &rt_waiter, current);
  	raw_spin_unlock_irq(&q.pi_state->pi_mutex.wait_lock);
@@ -16886,7 +16886,7 @@
  
  	if (ret) {
  		if (ret == 1)
-@@ -3033,11 +3053,21 @@ retry:
+@@ -3050,11 +3070,21 @@ retry:
  		 * rt_waiter. Also see the WARN in wake_futex_pi().
  		 */
  		raw_spin_lock_irq(&pi_state->pi_mutex.wait_lock);
@@ -16908,7 +16908,7 @@
  		put_pi_state(pi_state);
  
  		/*
-@@ -3195,7 +3225,7 @@ static int futex_wait_requeue_pi(u32 __u
+@@ -3225,7 +3255,7 @@ static int futex_wait_requeue_pi(u32 __u
  	struct hrtimer_sleeper timeout, *to = NULL;
  	struct futex_pi_state *pi_state = NULL;
  	struct rt_mutex_waiter rt_waiter;
@@ -16917,7 +16917,7 @@
  	union futex_key key2 = FUTEX_KEY_INIT;
  	struct futex_q q = futex_q_init;
  	int res, ret;
-@@ -3211,10 +3241,9 @@ static int futex_wait_requeue_pi(u32 __u
+@@ -3241,10 +3271,9 @@ static int futex_wait_requeue_pi(u32 __u
  
  	if (abs_time) {
  		to = &timeout;
@@ -16931,7 +16931,7 @@
  		hrtimer_set_expires_range_ns(&to->timer, *abs_time,
  					     current->timer_slack_ns);
  	}
-@@ -3223,7 +3252,7 @@ static int futex_wait_requeue_pi(u32 __u
+@@ -3253,7 +3282,7 @@ static int futex_wait_requeue_pi(u32 __u
  	 * The waiter is allocated on our stack, manipulated by the requeue
  	 * code while we sleep on uaddr.
  	 */
@@ -16940,7 +16940,7 @@
  
  	ret = get_futex_key(uaddr2, flags & FLAGS_SHARED, &key2, VERIFY_WRITE);
  	if (unlikely(ret != 0))
-@@ -3254,20 +3283,55 @@ static int futex_wait_requeue_pi(u32 __u
+@@ -3284,20 +3313,55 @@ static int futex_wait_requeue_pi(u32 __u
  	/* Queue the futex_q, drop the hb lock, wait for wakeup. */
  	futex_wait_queue_me(hb, &q, to);
  
@@ -17007,7 +17007,7 @@
  
  	/* Check if the requeue code acquired the second futex for us. */
  	if (!q.rt_waiter) {
-@@ -3276,7 +3340,8 @@ static int futex_wait_requeue_pi(u32 __u
+@@ -3306,7 +3370,8 @@ static int futex_wait_requeue_pi(u32 __u
  		 * did a lock-steal - fix up the PI-state in that case.
  		 */
  		if (q.pi_state && (q.pi_state->owner != current)) {
@@ -17017,7 +17017,7 @@
  			ret = fixup_pi_state_owner(uaddr2, &q, current);
  			if (ret && rt_mutex_owner(&q.pi_state->pi_mutex) == current) {
  				pi_state = q.pi_state;
-@@ -3287,7 +3352,7 @@ static int futex_wait_requeue_pi(u32 __u
+@@ -3317,7 +3382,7 @@ static int futex_wait_requeue_pi(u32 __u
  			 * the requeue_pi() code acquired for us.
  			 */
  			put_pi_state(q.pi_state);
@@ -17026,7 +17026,7 @@
  		}
  	} else {
  		struct rt_mutex *pi_mutex;
-@@ -3301,7 +3366,8 @@ static int futex_wait_requeue_pi(u32 __u
+@@ -3331,7 +3396,8 @@ static int futex_wait_requeue_pi(u32 __u
  		pi_mutex = &q.pi_state->pi_mutex;
  		ret = rt_mutex_wait_proxy_lock(pi_mutex, to, &rt_waiter);
  
@@ -17148,7 +17148,17 @@
  	}
  
  	raw_spin_lock_irqsave(&desc->lock, flags);
-@@ -889,7 +928,15 @@ irq_forced_thread_fn(struct irq_desc *de
+@@ -324,7 +363,9 @@ irq_set_affinity_notifier(unsigned int i
+ 	raw_spin_unlock_irqrestore(&desc->lock, flags);
+ 
+ 	if (old_notify) {
++#ifndef CONFIG_PREEMPT_RT_BASE
+ 		cancel_work_sync(&old_notify->work);
++#endif
+ 		kref_put(&old_notify->kref, old_notify->release);
+ 	}
+ 
+@@ -891,7 +932,15 @@ irq_forced_thread_fn(struct irq_desc *de
  		atomic_inc(&desc->threads_handled);
  
  	irq_finalize_oneshot(desc, action);
@@ -17165,7 +17175,7 @@
  	return ret;
  }
  
-@@ -987,6 +1034,12 @@ static int irq_thread(void *data)
+@@ -989,6 +1038,12 @@ static int irq_thread(void *data)
  		if (action_ret == IRQ_WAKE_THREAD)
  			irq_wake_secondary(desc, action);
  
@@ -17178,7 +17188,7 @@
  		wake_threads_waitq(desc);
  	}
  
-@@ -1385,6 +1438,9 @@ __setup_irq(unsigned int irq, struct irq
+@@ -1387,6 +1442,9 @@ __setup_irq(unsigned int irq, struct irq
  			irqd_set(&desc->irq_data, IRQD_NO_BALANCING);
  		}
  
@@ -17188,7 +17198,7 @@
  		if (irq_settings_can_autoenable(desc)) {
  			irq_startup(desc, IRQ_RESEND, IRQ_START_COND);
  		} else {
-@@ -2166,7 +2222,7 @@ EXPORT_SYMBOL_GPL(irq_get_irqchip_state)
+@@ -2168,7 +2226,7 @@ EXPORT_SYMBOL_GPL(irq_get_irqchip_state)
   *	This call sets the internal irqchip state of an interrupt,
   *	depending on the value of @which.
   *
@@ -20456,7 +20466,7 @@
  	 */
 --- a/kernel/ptrace.c
 +++ b/kernel/ptrace.c
-@@ -175,7 +175,14 @@ static bool ptrace_freeze_traced(struct
+@@ -176,7 +176,14 @@ static bool ptrace_freeze_traced(struct
  
  	spin_lock_irq(&task->sighand->siglock);
  	if (task_is_traced(task) && !__fatal_signal_pending(task)) {
@@ -27563,7 +27573,7 @@
  #ifdef CONFIG_TRACER_SNAPSHOT
  static const struct file_operations snapshot_fops = {
  	.open		= tracing_snapshot_open,
-@@ -7690,6 +7783,7 @@ static int instance_mkdir(const char *na
+@@ -7694,6 +7787,7 @@ static int instance_mkdir(const char *na
  	struct trace_array *tr;
  	int ret;
  
@@ -27571,7 +27581,7 @@
  	mutex_lock(&trace_types_lock);
  
  	ret = -EEXIST;
-@@ -7722,6 +7816,7 @@ static int instance_mkdir(const char *na
+@@ -7726,6 +7820,7 @@ static int instance_mkdir(const char *na
  
  	INIT_LIST_HEAD(&tr->systems);
  	INIT_LIST_HEAD(&tr->events);
@@ -27579,7 +27589,7 @@
  
  	if (allocate_trace_buffers(tr, trace_buf_size) < 0)
  		goto out_free_tr;
-@@ -7745,6 +7840,7 @@ static int instance_mkdir(const char *na
+@@ -7749,6 +7844,7 @@ static int instance_mkdir(const char *na
  	list_add(&tr->list, &ftrace_trace_arrays);
  
  	mutex_unlock(&trace_types_lock);
@@ -27587,7 +27597,7 @@
  
  	return 0;
  
-@@ -7756,6 +7852,7 @@ static int instance_mkdir(const char *na
+@@ -7760,6 +7856,7 @@ static int instance_mkdir(const char *na
  
   out_unlock:
  	mutex_unlock(&trace_types_lock);
@@ -27595,7 +27605,7 @@
  
  	return ret;
  
-@@ -7768,6 +7865,7 @@ static int instance_rmdir(const char *na
+@@ -7772,6 +7869,7 @@ static int instance_rmdir(const char *na
  	int ret;
  	int i;
  
@@ -27603,7 +27613,7 @@
  	mutex_lock(&trace_types_lock);
  
  	ret = -ENODEV;
-@@ -7813,6 +7911,7 @@ static int instance_rmdir(const char *na
+@@ -7817,6 +7915,7 @@ static int instance_rmdir(const char *na
  
   out_unlock:
  	mutex_unlock(&trace_types_lock);
@@ -27611,7 +27621,7 @@
  
  	return ret;
  }
-@@ -7870,6 +7969,9 @@ init_tracer_tracefs(struct trace_array *
+@@ -7874,6 +7973,9 @@ init_tracer_tracefs(struct trace_array *
  	trace_create_file("tracing_on", 0644, d_tracer,
  			  tr, &rb_simple_fops);
  
@@ -27621,7 +27631,7 @@
  	create_trace_options_dir(tr);
  
  #if defined(CONFIG_TRACER_MAX_TRACE) || defined(CONFIG_HWLAT_TRACER)
-@@ -8281,6 +8383,92 @@ void ftrace_dump(enum ftrace_dump_mode o
+@@ -8285,6 +8387,92 @@ void ftrace_dump(enum ftrace_dump_mode o
  }
  EXPORT_SYMBOL_GPL(ftrace_dump);
  
@@ -27714,7 +27724,7 @@
  __init static int tracer_alloc_buffers(void)
  {
  	int ring_buf_size;
-@@ -8381,6 +8569,7 @@ __init static int tracer_alloc_buffers(v
+@@ -8385,6 +8573,7 @@ __init static int tracer_alloc_buffers(v
  
  	INIT_LIST_HEAD(&global_trace.systems);
  	INIT_LIST_HEAD(&global_trace.events);
@@ -27761,7 +27771,7 @@
  /*
   * The global tracer (top) should be the first trace array added,
   * but we check the flag anyway.
-@@ -1293,7 +1302,7 @@ __event_trigger_test_discard(struct trac
+@@ -1344,7 +1353,7 @@ __event_trigger_test_discard(struct trac
  	unsigned long eflags = file->flags;
  
  	if (eflags & EVENT_FILE_FL_TRIGGER_COND)
@@ -27770,7 +27780,7 @@
  
  	if (test_bit(EVENT_FILE_FL_SOFT_DISABLED_BIT, &file->flags) ||
  	    (unlikely(file->flags & EVENT_FILE_FL_FILTERED) &&
-@@ -1330,7 +1339,7 @@ event_trigger_unlock_commit(struct trace
+@@ -1381,7 +1390,7 @@ event_trigger_unlock_commit(struct trace
  		trace_buffer_unlock_commit(file->tr, buffer, event, irq_flags, pc);
  
  	if (tt)
@@ -27779,7 +27789,7 @@
  }
  
  /**
-@@ -1363,7 +1372,7 @@ event_trigger_unlock_commit_regs(struct
+@@ -1414,7 +1423,7 @@ event_trigger_unlock_commit_regs(struct
  						irq_flags, pc, regs);
  
  	if (tt)
@@ -27788,7 +27798,7 @@
  }
  
  #define FILTER_PRED_INVALID	((unsigned short)-1)
-@@ -1545,6 +1554,8 @@ extern void pause_named_trigger(struct e
+@@ -1596,6 +1605,8 @@ extern void pause_named_trigger(struct e
  extern void unpause_named_trigger(struct event_trigger_data *data);
  extern void set_named_trigger_data(struct event_trigger_data *data,
  				   struct event_trigger_data *named_data);
@@ -27797,7 +27807,7 @@
  extern int register_event_command(struct event_command *cmd);
  extern int unregister_event_command(struct event_command *cmd);
  extern int register_trigger_hist_enable_disable_cmds(void);
-@@ -1588,7 +1599,8 @@ extern int register_trigger_hist_enable_
+@@ -1639,7 +1650,8 @@ extern int register_trigger_hist_enable_
   */
  struct event_trigger_ops {
  	void			(*func)(struct event_trigger_data *data,
@@ -27807,7 +27817,7 @@
  	int			(*init)(struct event_trigger_ops *ops,
  					struct event_trigger_data *data);
  	void			(*free)(struct event_trigger_ops *ops,
-@@ -1755,6 +1767,13 @@ void trace_printk_start_comm(void);
+@@ -1806,6 +1818,13 @@ void trace_printk_start_comm(void);
  int trace_keep_overwrite(struct tracer *tracer, u32 mask, int set);
  int set_tracer_flag(struct trace_array *tr, unsigned int mask, int enabled);
  
@@ -37834,7 +37844,7 @@
  
  bool napi_complete_done(struct napi_struct *n, int work_done)
  {
-@@ -5654,13 +5680,21 @@ static __latent_entropy void net_rx_acti
+@@ -5657,13 +5683,21 @@ static __latent_entropy void net_rx_acti
  	unsigned long time_limit = jiffies +
  		usecs_to_jiffies(netdev_budget_usecs);
  	int budget = netdev_budget;
@@ -37856,7 +37866,7 @@
  	for (;;) {
  		struct napi_struct *n;
  
-@@ -5690,7 +5724,7 @@ static __latent_entropy void net_rx_acti
+@@ -5693,7 +5727,7 @@ static __latent_entropy void net_rx_acti
  	list_splice_tail(&repoll, &list);
  	list_splice(&list, &sd->poll_list);
  	if (!list_empty(&sd->poll_list))
@@ -37865,7 +37875,7 @@
  
  	net_rps_action_and_irq_enable(sd);
  out:
-@@ -7564,7 +7598,7 @@ static void netdev_init_one_queue(struct
+@@ -7567,7 +7601,7 @@ static void netdev_init_one_queue(struct
  	/* Initialize queue lock */
  	spin_lock_init(&queue->_xmit_lock);
  	netdev_set_xmit_lockdep_class(&queue->_xmit_lock, dev->type);
@@ -37874,7 +37884,7 @@
  	netdev_queue_numa_node_write(queue, NUMA_NO_NODE);
  	queue->dev = dev;
  #ifdef CONFIG_BQL
-@@ -8507,6 +8541,7 @@ static int dev_cpu_dead(unsigned int old
+@@ -8510,6 +8544,7 @@ static int dev_cpu_dead(unsigned int old
  
  	raise_softirq_irqoff(NET_TX_SOFTIRQ);
  	local_irq_enable();
@@ -37882,7 +37892,7 @@
  
  #ifdef CONFIG_RPS
  	remsd = oldsd->rps_ipi_list;
-@@ -8520,10 +8555,13 @@ static int dev_cpu_dead(unsigned int old
+@@ -8523,10 +8558,13 @@ static int dev_cpu_dead(unsigned int old
  		netif_rx_ni(skb);
  		input_queue_head_incr(oldsd);
  	}
@@ -37897,7 +37907,7 @@
  
  	return 0;
  }
-@@ -8827,8 +8865,9 @@ static int __init net_dev_init(void)
+@@ -8830,8 +8868,9 @@ static int __init net_dev_init(void)
  
  		INIT_WORK(flush, flush_backlog);
  
