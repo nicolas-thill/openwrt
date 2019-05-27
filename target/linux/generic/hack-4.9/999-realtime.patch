@@ -1,9 +1,9 @@
-4.9.170-rt129
+4.9.178-rt131
 
 --- /dev/null
 +++ b/source/localversion-rt
 @@ -0,0 +1 @@
-+-rt129
++-rt131
 --- a/Documentation/sysrq.txt
 +++ b/Documentation/sysrq.txt
 @@ -59,10 +59,17 @@ On PowerPC - Press 'ALT - Print Screen (
@@ -2266,7 +2266,7 @@
  
 --- a/arch/x86/entry/common.c
 +++ b/arch/x86/entry/common.c
-@@ -130,7 +130,7 @@ static long syscall_trace_enter(struct p
+@@ -131,7 +131,7 @@ static long syscall_trace_enter(struct p
  
  #define EXIT_TO_USERMODE_LOOP_FLAGS				\
  	(_TIF_SIGPENDING | _TIF_NOTIFY_RESUME | _TIF_UPROBE |	\
@@ -2275,7 +2275,7 @@
  
  static void exit_to_usermode_loop(struct pt_regs *regs, u32 cached_flags)
  {
-@@ -146,9 +146,16 @@ static void exit_to_usermode_loop(struct
+@@ -147,9 +147,16 @@ static void exit_to_usermode_loop(struct
  		/* We have work to do. */
  		local_irq_enable();
  
@@ -2501,23 +2501,23 @@
  #endif
  
  /*
-@@ -87,6 +94,7 @@ struct thread_info {
- #define TIF_SYSCALL_EMU		6	/* syscall emulation active */
- #define TIF_SYSCALL_AUDIT	7	/* syscall auditing active */
- #define TIF_SECCOMP		8	/* secure computing */
-+#define TIF_NEED_RESCHED_LAZY	9	/* lazy rescheduling necessary */
- #define TIF_USER_RETURN_NOTIFY	11	/* notify kernel of userspace return */
+@@ -93,6 +100,7 @@ struct thread_info {
  #define TIF_UPROBE		12	/* breakpointed or singlestepping */
  #define TIF_NOTSC		16	/* TSC is not accessible in userland */
-@@ -111,6 +119,7 @@ struct thread_info {
- #define _TIF_SYSCALL_EMU	(1 << TIF_SYSCALL_EMU)
- #define _TIF_SYSCALL_AUDIT	(1 << TIF_SYSCALL_AUDIT)
- #define _TIF_SECCOMP		(1 << TIF_SECCOMP)
-+#define _TIF_NEED_RESCHED_LAZY	(1 << TIF_NEED_RESCHED_LAZY)
- #define _TIF_USER_RETURN_NOTIFY	(1 << TIF_USER_RETURN_NOTIFY)
+ #define TIF_IA32		17	/* IA32 compatibility process */
++#define TIF_NEED_RESCHED_LAZY	18	/* lazy rescheduling necessary */
+ #define TIF_NOHZ		19	/* in adaptive nohz mode */
+ #define TIF_MEMDIE		20	/* is terminating due to OOM killer */
+ #define TIF_POLLING_NRFLAG	21	/* idle is polling for TIF_NEED_RESCHED */
+@@ -119,6 +127,7 @@ struct thread_info {
  #define _TIF_UPROBE		(1 << TIF_UPROBE)
  #define _TIF_NOTSC		(1 << TIF_NOTSC)
-@@ -146,6 +155,8 @@ struct thread_info {
+ #define _TIF_IA32		(1 << TIF_IA32)
++#define _TIF_NEED_RESCHED_LAZY	(1 << TIF_NEED_RESCHED_LAZY)
+ #define _TIF_NOHZ		(1 << TIF_NOHZ)
+ #define _TIF_POLLING_NRFLAG	(1 << TIF_POLLING_NRFLAG)
+ #define _TIF_IO_BITMAP		(1 << TIF_IO_BITMAP)
+@@ -160,6 +169,8 @@ struct thread_info {
  #define _TIF_WORK_CTXSW_PREV (_TIF_WORK_CTXSW|_TIF_USER_RETURN_NOTIFY)
  #define _TIF_WORK_CTXSW_NEXT (_TIF_WORK_CTXSW)
  
@@ -2612,7 +2612,7 @@
  #include <linux/jump_label.h>
  
  #include <asm/processor.h>
-@@ -1336,7 +1338,7 @@ void mce_log_therm_throt_event(__u64 sta
+@@ -1338,7 +1340,7 @@ void mce_log_therm_throt_event(__u64 sta
  static unsigned long check_interval = INITIAL_CHECK_INTERVAL;
  
  static DEFINE_PER_CPU(unsigned long, mce_next_interval); /* in jiffies */
@@ -2621,7 +2621,7 @@
  
  static unsigned long mce_adjust_timer_default(unsigned long interval)
  {
-@@ -1345,32 +1347,18 @@ static unsigned long mce_adjust_timer_de
+@@ -1347,32 +1349,18 @@ static unsigned long mce_adjust_timer_de
  
  static unsigned long (*mce_adjust_timer)(unsigned long interval) = mce_adjust_timer_default;
  
@@ -2660,7 +2660,7 @@
  	iv = __this_cpu_read(mce_next_interval);
  
  	if (mce_available(this_cpu_ptr(&cpu_info))) {
-@@ -1393,7 +1381,7 @@ static void mce_timer_fn(unsigned long d
+@@ -1395,7 +1383,7 @@ static void mce_timer_fn(unsigned long d
  
  done:
  	__this_cpu_write(mce_next_interval, iv);
@@ -2669,7 +2669,7 @@
  }
  
  /*
-@@ -1401,7 +1389,7 @@ done:
+@@ -1403,7 +1391,7 @@ done:
   */
  void mce_timer_kick(unsigned long interval)
  {
@@ -2678,7 +2678,7 @@
  	unsigned long iv = __this_cpu_read(mce_next_interval);
  
  	__restart_timer(t, interval);
-@@ -1416,7 +1404,7 @@ static void mce_timer_delete_all(void)
+@@ -1418,7 +1406,7 @@ static void mce_timer_delete_all(void)
  	int cpu;
  
  	for_each_online_cpu(cpu)
@@ -2687,7 +2687,7 @@
  }
  
  static void mce_do_trigger(struct work_struct *work)
-@@ -1426,6 +1414,56 @@ static void mce_do_trigger(struct work_s
+@@ -1428,6 +1416,56 @@ static void mce_do_trigger(struct work_s
  
  static DECLARE_WORK(mce_trigger_work, mce_do_trigger);
  
@@ -2744,7 +2744,7 @@
  /*
   * Notify the user(s) about new machine check events.
   * Can be called from interrupt context, but not from machine check/NMI
-@@ -1433,19 +1471,8 @@ static DECLARE_WORK(mce_trigger_work, mc
+@@ -1435,19 +1473,8 @@ static DECLARE_WORK(mce_trigger_work, mc
   */
  int mce_notify_irq(void)
  {
@@ -2765,7 +2765,7 @@
  		return 1;
  	}
  	return 0;
-@@ -1756,7 +1783,7 @@ static void __mcheck_cpu_clear_vendor(st
+@@ -1758,7 +1785,7 @@ static void __mcheck_cpu_clear_vendor(st
  	}
  }
  
@@ -2774,7 +2774,7 @@
  {
  	unsigned long iv = check_interval * HZ;
  
-@@ -1765,16 +1792,17 @@ static void mce_start_timer(unsigned int
+@@ -1767,16 +1794,17 @@ static void mce_start_timer(unsigned int
  
  	per_cpu(mce_next_interval, cpu) = iv;
  
@@ -2796,7 +2796,7 @@
  	mce_start_timer(cpu, t);
  }
  
-@@ -2519,6 +2547,8 @@ static void mce_disable_cpu(void *h)
+@@ -2521,6 +2549,8 @@ static void mce_disable_cpu(void *h)
  	if (!mce_available(raw_cpu_ptr(&cpu_info)))
  		return;
  
@@ -2805,7 +2805,7 @@
  	if (!(action & CPU_TASKS_FROZEN))
  		cmci_clear();
  
-@@ -2541,6 +2571,7 @@ static void mce_reenable_cpu(void *h)
+@@ -2543,6 +2573,7 @@ static void mce_reenable_cpu(void *h)
  		if (b->init)
  			wrmsrl(msr_ops.ctl(i), b->ctl);
  	}
@@ -2813,7 +2813,7 @@
  }
  
  /* Get notified when a cpu comes on/off. Be hotplug friendly. */
-@@ -2548,7 +2579,6 @@ static int
+@@ -2550,7 +2581,6 @@ static int
  mce_cpu_callback(struct notifier_block *nfb, unsigned long action, void *hcpu)
  {
  	unsigned int cpu = (unsigned long)hcpu;
@@ -2821,7 +2821,7 @@
  
  	switch (action & ~CPU_TASKS_FROZEN) {
  	case CPU_ONLINE:
-@@ -2568,11 +2598,9 @@ mce_cpu_callback(struct notifier_block *
+@@ -2570,11 +2600,9 @@ mce_cpu_callback(struct notifier_block *
  		break;
  	case CPU_DOWN_PREPARE:
  		smp_call_function_single(cpu, mce_disable_cpu, &action, 1);
@@ -2833,7 +2833,7 @@
  		break;
  	}
  
-@@ -2611,6 +2639,10 @@ static __init int mcheck_init_device(voi
+@@ -2613,6 +2641,10 @@ static __init int mcheck_init_device(voi
  		goto err_out;
  	}
  
@@ -2893,7 +2893,7 @@
  
  #include <asm/pgtable.h>
  #include <asm/ldt.h>
-@@ -195,6 +196,35 @@ start_thread(struct pt_regs *regs, unsig
+@@ -197,6 +198,35 @@ start_thread(struct pt_regs *regs, unsig
  }
  EXPORT_SYMBOL_GPL(start_thread);
  
@@ -2929,9 +2929,9 @@
  
  /*
   *	switch_to(x,y) should switch tasks from x to y.
-@@ -271,6 +301,8 @@ __switch_to(struct task_struct *prev_p,
- 		     task_thread_info(next_p)->flags & _TIF_WORK_CTXSW_NEXT))
- 		__switch_to_xtra(prev_p, next_p, tss);
+@@ -268,6 +298,8 @@ __switch_to(struct task_struct *prev_p,
+ 
+ 	switch_to_extra(prev_p, next_p);
  
 +	switch_kmaps(prev_p, next_p);
 +
@@ -4993,7 +4993,7 @@
  }
  
  static struct stripe_head *alloc_stripe(struct kmem_cache *sc, gfp_t gfp,
-@@ -6425,6 +6427,7 @@ static int raid456_cpu_up_prepare(unsign
+@@ -6414,6 +6416,7 @@ static int raid456_cpu_up_prepare(unsign
  		       __func__, cpu);
  		return -ENOMEM;
  	}
@@ -5001,7 +5001,7 @@
  	return 0;
  }
  
-@@ -6435,7 +6438,6 @@ static int raid5_alloc_percpu(struct r5c
+@@ -6424,7 +6427,6 @@ static int raid5_alloc_percpu(struct r5c
  	conf->percpu = alloc_percpu(struct raid5_percpu);
  	if (!conf->percpu)
  		return -ENOMEM;
@@ -6965,7 +6965,7 @@
  /**
 --- a/include/linux/cpu.h
 +++ b/include/linux/cpu.h
-@@ -193,6 +193,8 @@ extern void get_online_cpus(void);
+@@ -195,6 +195,8 @@ extern void get_online_cpus(void);
  extern void put_online_cpus(void);
  extern void cpu_hotplug_disable(void);
  extern void cpu_hotplug_enable(void);
@@ -6974,7 +6974,7 @@
  #define hotcpu_notifier(fn, pri)	cpu_notifier(fn, pri)
  #define __hotcpu_notifier(fn, pri)	__cpu_notifier(fn, pri)
  #define register_hotcpu_notifier(nb)	register_cpu_notifier(nb)
-@@ -210,6 +212,8 @@ static inline void cpu_hotplug_done(void
+@@ -212,6 +214,8 @@ static inline void cpu_hotplug_done(void
  #define put_online_cpus()	do { } while (0)
  #define cpu_hotplug_disable()	do { } while (0)
  #define cpu_hotplug_enable()	do { } while (0)
@@ -9730,7 +9730,7 @@
  #define PF_EXITING	0x00000004	/* getting shut down */
  #define PF_EXITPIDONE	0x00000008	/* pi exit done on shut down */
  #define PF_VCPU		0x00000010	/* I'm a virtual CPU */
-@@ -2452,6 +2518,10 @@ extern void do_set_cpus_allowed(struct t
+@@ -2461,6 +2527,10 @@ extern void do_set_cpus_allowed(struct t
  
  extern int set_cpus_allowed_ptr(struct task_struct *p,
  				const struct cpumask *new_mask);
@@ -9741,7 +9741,7 @@
  #else
  static inline void do_set_cpus_allowed(struct task_struct *p,
  				      const struct cpumask *new_mask)
-@@ -2464,6 +2534,9 @@ static inline int set_cpus_allowed_ptr(s
+@@ -2473,6 +2543,9 @@ static inline int set_cpus_allowed_ptr(s
  		return -EINVAL;
  	return 0;
  }
@@ -9751,7 +9751,7 @@
  #endif
  
  #ifdef CONFIG_NO_HZ_COMMON
-@@ -2702,6 +2775,7 @@ extern void xtime_update(unsigned long t
+@@ -2711,6 +2784,7 @@ extern void xtime_update(unsigned long t
  
  extern int wake_up_state(struct task_struct *tsk, unsigned int state);
  extern int wake_up_process(struct task_struct *tsk);
@@ -9759,7 +9759,7 @@
  extern void wake_up_new_task(struct task_struct *tsk);
  #ifdef CONFIG_SMP
   extern void kick_process(struct task_struct *tsk);
-@@ -2910,6 +2984,17 @@ static inline void mmdrop(struct mm_stru
+@@ -2919,6 +2993,17 @@ static inline void mmdrop(struct mm_stru
  		__mmdrop(mm);
  }
  
@@ -9777,7 +9777,7 @@
  static inline void mmdrop_async_fn(struct work_struct *work)
  {
  	struct mm_struct *mm = container_of(work, struct mm_struct, async_put_work);
-@@ -3306,6 +3391,43 @@ static inline int test_tsk_need_resched(
+@@ -3315,6 +3400,43 @@ static inline int test_tsk_need_resched(
  	return unlikely(test_tsk_thread_flag(tsk,TIF_NEED_RESCHED));
  }
  
@@ -9821,7 +9821,7 @@
  static inline int restart_syscall(void)
  {
  	set_tsk_thread_flag(current, TIF_SIGPENDING);
-@@ -3337,6 +3459,51 @@ static inline int signal_pending_state(l
+@@ -3346,6 +3468,51 @@ static inline int signal_pending_state(l
  	return (state & TASK_INTERRUPTIBLE) || __fatal_signal_pending(p);
  }
  
@@ -9873,7 +9873,7 @@
  /*
   * cond_resched() and cond_resched_lock(): latency reduction via
   * explicit rescheduling in places that are safe. The return
-@@ -3362,12 +3529,16 @@ extern int __cond_resched_lock(spinlock_
+@@ -3371,12 +3538,16 @@ extern int __cond_resched_lock(spinlock_
  	__cond_resched_lock(lock);				\
  })
  
@@ -9890,7 +9890,7 @@
  
  static inline void cond_resched_rcu(void)
  {
-@@ -3542,6 +3713,31 @@ static inline void set_task_cpu(struct t
+@@ -3551,6 +3722,31 @@ static inline void set_task_cpu(struct t
  
  #endif /* CONFIG_SMP */
  
@@ -11421,7 +11421,7 @@
  	 * Used to destroy pidlists and separate to serve as flush domain.
 --- a/kernel/cpu.c
 +++ b/kernel/cpu.c
-@@ -246,6 +246,289 @@ static struct {
+@@ -247,6 +247,289 @@ static struct {
  #define cpuhp_lock_acquire()      lock_map_acquire(&cpu_hotplug.dep_map)
  #define cpuhp_lock_release()      lock_map_release(&cpu_hotplug.dep_map)
  
@@ -11711,7 +11711,7 @@
  
  void get_online_cpus(void)
  {
-@@ -921,9 +1204,13 @@ static int takedown_cpu(unsigned int cpu
+@@ -928,9 +1211,13 @@ static int takedown_cpu(unsigned int cpu
  	struct cpuhp_cpu_state *st = per_cpu_ptr(&cpuhp_state, cpu);
  	int err;
  
@@ -11725,7 +11725,7 @@
  	/*
  	 * Prevent irq alloc/free while the dying cpu reorganizes the
  	 * interrupt affinities.
-@@ -1008,6 +1295,9 @@ static int __ref _cpu_down(unsigned int
+@@ -1015,6 +1302,9 @@ static int __ref _cpu_down(unsigned int
  	struct cpuhp_cpu_state *st = per_cpu_ptr(&cpuhp_state, cpu);
  	int prev_state, ret = 0;
  	bool hasdied = false;
@@ -11735,7 +11735,7 @@
  
  	if (num_online_cpus() == 1)
  		return -EBUSY;
-@@ -1015,7 +1305,34 @@ static int __ref _cpu_down(unsigned int
+@@ -1022,7 +1312,34 @@ static int __ref _cpu_down(unsigned int
  	if (!cpu_present(cpu))
  		return -EINVAL;
  
@@ -11770,7 +11770,7 @@
  
  	cpuhp_tasks_frozen = tasks_frozen;
  
-@@ -1054,10 +1371,15 @@ static int __ref _cpu_down(unsigned int
+@@ -1061,10 +1378,15 @@ static int __ref _cpu_down(unsigned int
  
  	hasdied = prev_state != st->state && st->state == CPUHP_OFFLINE;
  out:
@@ -11783,10 +11783,10 @@
 +restore_cpus:
 +	set_cpus_allowed_ptr(current, cpumask_org);
 +	free_cpumask_var(cpumask_org);
+ 	arch_smt_update();
  	return ret;
  }
- 
-@@ -1364,6 +1686,8 @@ core_initcall(cpu_hotplug_pm_sync_init);
+@@ -1373,6 +1695,8 @@ core_initcall(cpu_hotplug_pm_sync_init);
  
  #endif /* CONFIG_PM_SLEEP_SMP */
  
@@ -11795,7 +11795,7 @@
  #endif /* CONFIG_SMP */
  
  /* Boot processor state steps */
-@@ -2210,6 +2534,10 @@ void __init boot_cpu_init(void)
+@@ -2222,6 +2546,10 @@ void __init boot_cpu_init(void)
  	set_cpu_active(cpu, true);
  	set_cpu_present(cpu, true);
  	set_cpu_possible(cpu, true);
@@ -13669,7 +13669,17 @@
  	}
  
  	raw_spin_lock_irqsave(&desc->lock, flags);
-@@ -882,7 +921,15 @@ irq_forced_thread_fn(struct irq_desc *de
+@@ -333,7 +372,9 @@ irq_set_affinity_notifier(unsigned int i
+ 	raw_spin_unlock_irqrestore(&desc->lock, flags);
+ 
+ 	if (old_notify) {
++#ifndef CONFIG_PREEMPT_RT_BASE
+ 		cancel_work_sync(&old_notify->work);
++#endif
+ 		kref_put(&old_notify->kref, old_notify->release);
+ 	}
+ 
+@@ -884,7 +925,15 @@ irq_forced_thread_fn(struct irq_desc *de
  		atomic_inc(&desc->threads_handled);
  
  	irq_finalize_oneshot(desc, action);
@@ -13686,7 +13696,7 @@
  	return ret;
  }
  
-@@ -980,6 +1027,12 @@ static int irq_thread(void *data)
+@@ -982,6 +1031,12 @@ static int irq_thread(void *data)
  		if (action_ret == IRQ_WAKE_THREAD)
  			irq_wake_secondary(desc, action);
  
@@ -13699,7 +13709,7 @@
  		wake_threads_waitq(desc);
  	}
  
-@@ -1349,6 +1402,9 @@ __setup_irq(unsigned int irq, struct irq
+@@ -1351,6 +1406,9 @@ __setup_irq(unsigned int irq, struct irq
  			irqd_set(&desc->irq_data, IRQD_NO_BALANCING);
  		}
  
@@ -13709,7 +13719,7 @@
  		/* Set default affinity mask once everything is setup */
  		setup_affinity(desc, mask);
  
-@@ -2074,7 +2130,7 @@ EXPORT_SYMBOL_GPL(irq_get_irqchip_state)
+@@ -2076,7 +2134,7 @@ EXPORT_SYMBOL_GPL(irq_get_irqchip_state)
   *	This call sets the internal irqchip state of an interrupt,
   *	depending on the value of @which.
   *
@@ -14041,7 +14051,7 @@
  			return 0;
  
  		/*
-@@ -3699,6 +3712,7 @@ static void check_flags(unsigned long fl
+@@ -3696,6 +3709,7 @@ static void check_flags(unsigned long fl
  		}
  	}
  
@@ -14049,7 +14059,7 @@
  	/*
  	 * We dont accurately track softirq state in e.g.
  	 * hardirq contexts (such as on 4KSTACKS), so only
-@@ -3713,6 +3727,7 @@ static void check_flags(unsigned long fl
+@@ -3710,6 +3724,7 @@ static void check_flags(unsigned long fl
  			DEBUG_LOCKS_WARN_ON(!current->softirqs_enabled);
  		}
  	}
@@ -14057,7 +14067,7 @@
  
  	if (!debug_locks)
  		print_irqtrace_events(current);
-@@ -4169,7 +4184,7 @@ void lockdep_reset_lock(struct lockdep_m
+@@ -4166,7 +4181,7 @@ void lockdep_reset_lock(struct lockdep_m
  		 * If the class exists we look it up and zap it:
  		 */
  		class = look_up_lock_class(lock, j);
@@ -18758,7 +18768,7 @@
  #endif
  
  	init_dl_bw(&rd->dl_bw);
-@@ -7456,6 +7802,10 @@ int sched_cpu_dying(unsigned int cpu)
+@@ -7475,6 +7821,10 @@ int sched_cpu_dying(unsigned int cpu)
  	update_max_interval();
  	nohz_balance_exit_idle(cpu);
  	hrtick_clear(rq);
@@ -18769,7 +18779,7 @@
  	return 0;
  }
  #endif
-@@ -7717,7 +8067,7 @@ void __init sched_init(void)
+@@ -7736,7 +8086,7 @@ void __init sched_init(void)
  #ifdef CONFIG_DEBUG_ATOMIC_SLEEP
  static inline int preempt_count_equals(int preempt_offset)
  {
@@ -18813,7 +18823,7 @@
  #undef __PN
 --- a/kernel/sched/fair.c
 +++ b/kernel/sched/fair.c
-@@ -3519,7 +3519,7 @@ check_preempt_tick(struct cfs_rq *cfs_rq
+@@ -3523,7 +3523,7 @@ check_preempt_tick(struct cfs_rq *cfs_rq
  	ideal_runtime = sched_slice(cfs_rq, curr);
  	delta_exec = curr->sum_exec_runtime - curr->prev_sum_exec_runtime;
  	if (delta_exec > ideal_runtime) {
@@ -18822,7 +18832,7 @@
  		/*
  		 * The current task ran long enough, ensure it doesn't get
  		 * re-elected due to buddy favours.
-@@ -3543,7 +3543,7 @@ check_preempt_tick(struct cfs_rq *cfs_rq
+@@ -3547,7 +3547,7 @@ check_preempt_tick(struct cfs_rq *cfs_rq
  		return;
  
  	if (delta > ideal_runtime)
@@ -18831,7 +18841,7 @@
  }
  
  static void
-@@ -3685,7 +3685,7 @@ entity_tick(struct cfs_rq *cfs_rq, struc
+@@ -3689,7 +3689,7 @@ entity_tick(struct cfs_rq *cfs_rq, struc
  	 * validating it and just reschedule.
  	 */
  	if (queued) {
@@ -18840,7 +18850,7 @@
  		return;
  	}
  	/*
-@@ -3867,7 +3867,7 @@ static void __account_cfs_rq_runtime(str
+@@ -3871,7 +3871,7 @@ static void __account_cfs_rq_runtime(str
  	 * hierarchy can be throttled
  	 */
  	if (!assign_cfs_rq_runtime(cfs_rq) && likely(cfs_rq->curr))
@@ -18849,7 +18859,7 @@
  }
  
  static __always_inline
-@@ -4511,7 +4511,7 @@ static void hrtick_start_fair(struct rq
+@@ -4540,7 +4540,7 @@ static void hrtick_start_fair(struct rq
  
  		if (delta < 0) {
  			if (rq->curr == p)
@@ -18858,7 +18868,7 @@
  			return;
  		}
  		hrtick_start(rq, delta);
-@@ -5879,7 +5879,7 @@ static void check_preempt_wakeup(struct
+@@ -5908,7 +5908,7 @@ static void check_preempt_wakeup(struct
  	return;
  
  preempt:
@@ -18867,7 +18877,7 @@
  	/*
  	 * Only set the backward buddy when the current task is still
  	 * on the rq. This can happen when a wakeup gets interleaved
-@@ -8605,7 +8605,7 @@ static void task_fork_fair(struct task_s
+@@ -8634,7 +8634,7 @@ static void task_fork_fair(struct task_s
  		 * 'current' within the tree based on its new key value.
  		 */
  		swap(curr->vruntime, se->vruntime);
@@ -18876,7 +18886,7 @@
  	}
  
  	se->vruntime -= cfs_rq->min_vruntime;
-@@ -8629,7 +8629,7 @@ prio_changed_fair(struct rq *rq, struct
+@@ -8658,7 +8658,7 @@ prio_changed_fair(struct rq *rq, struct
  	 */
  	if (rq->curr == p) {
  		if (p->prio > oldprio)
@@ -18919,7 +18929,7 @@
  
 --- a/kernel/sched/sched.h
 +++ b/kernel/sched/sched.h
-@@ -1167,6 +1167,7 @@ static inline void finish_lock_switch(st
+@@ -1168,6 +1168,7 @@ static inline void finish_lock_switch(st
  #define WF_SYNC		0x01		/* waker goes to sleep after wakeup */
  #define WF_FORK		0x02		/* child wakeup after fork */
  #define WF_MIGRATED	0x4		/* internal use, task got migrated */
@@ -18927,7 +18937,7 @@
  
  /*
   * To aid in avoiding the subversion of "niceness" due to uneven distribution
-@@ -1350,6 +1351,15 @@ extern void init_sched_fair_class(void);
+@@ -1351,6 +1352,15 @@ extern void init_sched_fair_class(void);
  extern void resched_curr(struct rq *rq);
  extern void resched_cpu(int cpu);
  
@@ -23018,7 +23028,7 @@
 +device_initcall(latency_hist_init);
 --- a/kernel/trace/trace.c
 +++ b/kernel/trace/trace.c
-@@ -1903,6 +1903,7 @@ tracing_generic_entry_update(struct trac
+@@ -1906,6 +1906,7 @@ tracing_generic_entry_update(struct trac
  	struct task_struct *tsk = current;
  
  	entry->preempt_count		= pc & 0xff;
@@ -23026,7 +23036,7 @@
  	entry->pid			= (tsk) ? tsk->pid : 0;
  	entry->flags =
  #ifdef CONFIG_TRACE_IRQFLAGS_SUPPORT
-@@ -1913,8 +1914,11 @@ tracing_generic_entry_update(struct trac
+@@ -1916,8 +1917,11 @@ tracing_generic_entry_update(struct trac
  		((pc & NMI_MASK    ) ? TRACE_FLAG_NMI     : 0) |
  		((pc & HARDIRQ_MASK) ? TRACE_FLAG_HARDIRQ : 0) |
  		((pc & SOFTIRQ_OFFSET) ? TRACE_FLAG_SOFTIRQ : 0) |
@@ -23039,7 +23049,7 @@
  }
  EXPORT_SYMBOL_GPL(tracing_generic_entry_update);
  
-@@ -2909,14 +2913,17 @@ get_total_entries(struct trace_buffer *b
+@@ -2912,14 +2916,17 @@ get_total_entries(struct trace_buffer *b
  
  static void print_lat_help_header(struct seq_file *m)
  {
@@ -23065,7 +23075,7 @@
  }
  
  static void print_event_info(struct trace_buffer *buf, struct seq_file *m)
-@@ -2942,11 +2949,14 @@ static void print_func_help_header_irq(s
+@@ -2945,11 +2952,14 @@ static void print_func_help_header_irq(s
  	print_event_info(buf, m);
  	seq_puts(m, "#                              _-----=> irqs-off\n"
  		    "#                             / _----=> need-resched\n"
@@ -24499,7 +24509,7 @@
 --- /dev/null
 +++ b/localversion-rt
 @@ -0,0 +1 @@
-+-rt129
++-rt131
 --- a/mm/Kconfig
 +++ b/mm/Kconfig
 @@ -410,7 +410,7 @@ config NOMMU_INITIAL_TRIM_EXCESS
@@ -26997,7 +27007,7 @@
  	return true;
 --- a/net/ipv4/sysctl_net_ipv4.c
 +++ b/net/ipv4/sysctl_net_ipv4.c
-@@ -690,6 +690,13 @@ static struct ctl_table ipv4_net_table[]
+@@ -693,6 +693,13 @@ static struct ctl_table ipv4_net_table[]
  		.proc_handler	= proc_dointvec
  	},
  	{
