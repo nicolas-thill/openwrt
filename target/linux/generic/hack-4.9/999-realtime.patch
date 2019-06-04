@@ -2612,7 +2612,7 @@
  #include <linux/jump_label.h>
  
  #include <asm/processor.h>
-@@ -1338,7 +1340,7 @@ void mce_log_therm_throt_event(__u64 sta
+@@ -1368,7 +1370,7 @@ void mce_log_therm_throt_event(__u64 sta
  static unsigned long check_interval = INITIAL_CHECK_INTERVAL;
  
  static DEFINE_PER_CPU(unsigned long, mce_next_interval); /* in jiffies */
@@ -2621,7 +2621,7 @@
  
  static unsigned long mce_adjust_timer_default(unsigned long interval)
  {
-@@ -1347,32 +1349,18 @@ static unsigned long mce_adjust_timer_de
+@@ -1377,32 +1379,18 @@ static unsigned long mce_adjust_timer_de
  
  static unsigned long (*mce_adjust_timer)(unsigned long interval) = mce_adjust_timer_default;
  
@@ -2660,7 +2660,7 @@
  	iv = __this_cpu_read(mce_next_interval);
  
  	if (mce_available(this_cpu_ptr(&cpu_info))) {
-@@ -1395,7 +1383,7 @@ static void mce_timer_fn(unsigned long d
+@@ -1425,7 +1413,7 @@ static void mce_timer_fn(unsigned long d
  
  done:
  	__this_cpu_write(mce_next_interval, iv);
@@ -2669,7 +2669,7 @@
  }
  
  /*
-@@ -1403,7 +1391,7 @@ done:
+@@ -1433,7 +1421,7 @@ done:
   */
  void mce_timer_kick(unsigned long interval)
  {
@@ -2678,7 +2678,7 @@
  	unsigned long iv = __this_cpu_read(mce_next_interval);
  
  	__restart_timer(t, interval);
-@@ -1418,7 +1406,7 @@ static void mce_timer_delete_all(void)
+@@ -1448,7 +1436,7 @@ static void mce_timer_delete_all(void)
  	int cpu;
  
  	for_each_online_cpu(cpu)
@@ -2687,7 +2687,7 @@
  }
  
  static void mce_do_trigger(struct work_struct *work)
-@@ -1428,6 +1416,56 @@ static void mce_do_trigger(struct work_s
+@@ -1458,6 +1446,56 @@ static void mce_do_trigger(struct work_s
  
  static DECLARE_WORK(mce_trigger_work, mce_do_trigger);
  
@@ -2744,7 +2744,7 @@
  /*
   * Notify the user(s) about new machine check events.
   * Can be called from interrupt context, but not from machine check/NMI
-@@ -1435,19 +1473,8 @@ static DECLARE_WORK(mce_trigger_work, mc
+@@ -1465,19 +1503,8 @@ static DECLARE_WORK(mce_trigger_work, mc
   */
  int mce_notify_irq(void)
  {
@@ -2765,7 +2765,7 @@
  		return 1;
  	}
  	return 0;
-@@ -1758,7 +1785,7 @@ static void __mcheck_cpu_clear_vendor(st
+@@ -1788,7 +1815,7 @@ static void __mcheck_cpu_clear_vendor(st
  	}
  }
  
@@ -2774,7 +2774,7 @@
  {
  	unsigned long iv = check_interval * HZ;
  
-@@ -1767,16 +1794,17 @@ static void mce_start_timer(unsigned int
+@@ -1797,16 +1824,17 @@ static void mce_start_timer(unsigned int
  
  	per_cpu(mce_next_interval, cpu) = iv;
  
@@ -2796,7 +2796,7 @@
  	mce_start_timer(cpu, t);
  }
  
-@@ -2521,6 +2549,8 @@ static void mce_disable_cpu(void *h)
+@@ -2551,6 +2579,8 @@ static void mce_disable_cpu(void *h)
  	if (!mce_available(raw_cpu_ptr(&cpu_info)))
  		return;
  
@@ -2805,7 +2805,7 @@
  	if (!(action & CPU_TASKS_FROZEN))
  		cmci_clear();
  
-@@ -2543,6 +2573,7 @@ static void mce_reenable_cpu(void *h)
+@@ -2573,6 +2603,7 @@ static void mce_reenable_cpu(void *h)
  		if (b->init)
  			wrmsrl(msr_ops.ctl(i), b->ctl);
  	}
@@ -2813,7 +2813,7 @@
  }
  
  /* Get notified when a cpu comes on/off. Be hotplug friendly. */
-@@ -2550,7 +2581,6 @@ static int
+@@ -2580,7 +2611,6 @@ static int
  mce_cpu_callback(struct notifier_block *nfb, unsigned long action, void *hcpu)
  {
  	unsigned int cpu = (unsigned long)hcpu;
@@ -2821,7 +2821,7 @@
  
  	switch (action & ~CPU_TASKS_FROZEN) {
  	case CPU_ONLINE:
-@@ -2570,11 +2600,9 @@ mce_cpu_callback(struct notifier_block *
+@@ -2600,11 +2630,9 @@ mce_cpu_callback(struct notifier_block *
  		break;
  	case CPU_DOWN_PREPARE:
  		smp_call_function_single(cpu, mce_disable_cpu, &action, 1);
@@ -2833,7 +2833,7 @@
  		break;
  	}
  
-@@ -2613,6 +2641,10 @@ static __init int mcheck_init_device(voi
+@@ -2643,6 +2671,10 @@ static __init int mcheck_init_device(voi
  		goto err_out;
  	}
  
@@ -4993,7 +4993,7 @@
  }
  
  static struct stripe_head *alloc_stripe(struct kmem_cache *sc, gfp_t gfp,
-@@ -6414,6 +6416,7 @@ static int raid456_cpu_up_prepare(unsign
+@@ -6433,6 +6435,7 @@ static int raid456_cpu_up_prepare(unsign
  		       __func__, cpu);
  		return -ENOMEM;
  	}
@@ -5001,7 +5001,7 @@
  	return 0;
  }
  
-@@ -6424,7 +6427,6 @@ static int raid5_alloc_percpu(struct r5c
+@@ -6443,7 +6446,6 @@ static int raid5_alloc_percpu(struct r5c
  	conf->percpu = alloc_percpu(struct raid5_percpu);
  	if (!conf->percpu)
  		return -ENOMEM;
@@ -6426,7 +6426,7 @@
  out:
 --- a/fs/nfs/nfs4state.c
 +++ b/fs/nfs/nfs4state.c
-@@ -488,7 +488,7 @@ nfs4_alloc_state_owner(struct nfs_server
+@@ -492,7 +492,7 @@ nfs4_alloc_state_owner(struct nfs_server
  	nfs4_init_seqid_counter(&sp->so_seqid);
  	atomic_set(&sp->so_count, 1);
  	INIT_LIST_HEAD(&sp->so_lru);
@@ -6435,7 +6435,7 @@
  	mutex_init(&sp->so_delegreturn_mutex);
  	return sp;
  }
-@@ -1503,8 +1503,12 @@ static int nfs4_reclaim_open_state(struc
+@@ -1507,8 +1507,12 @@ static int nfs4_reclaim_open_state(struc
  	 * recovering after a network partition or a reboot from a
  	 * server that doesn't support a grace period.
  	 */
@@ -6449,7 +6449,7 @@
  restart:
  	list_for_each_entry(state, &sp->so_states, open_states) {
  		if (!test_and_clear_bit(ops->state_flag_bit, &state->flags))
-@@ -1573,14 +1577,20 @@ restart:
+@@ -1577,14 +1581,20 @@ restart:
  		spin_lock(&sp->so_lock);
  		goto restart;
  	}
