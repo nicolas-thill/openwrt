@@ -6133,7 +6133,7 @@
  	call	preempt_schedule_irq
  	jmp	0b
  1:
-@@ -990,6 +1006,7 @@ bad_gs:
+@@ -1004,6 +1020,7 @@ bad_gs:
  	jmp	2b
  	.previous
  
@@ -6141,7 +6141,7 @@
  /* Call softirq on interrupt stack. Interrupts are off. */
  ENTRY(do_softirq_own_stack)
  	pushq	%rbp
-@@ -1000,6 +1017,7 @@ ENTRY(do_softirq_own_stack)
+@@ -1014,6 +1031,7 @@ ENTRY(do_softirq_own_stack)
  	leaveq
  	ret
  ENDPROC(do_softirq_own_stack)
@@ -9408,7 +9408,7 @@
  }
  
  static void free_stripe(struct kmem_cache *sc, struct stripe_head *sh)
-@@ -6774,6 +6776,7 @@ static int raid456_cpu_up_prepare(unsign
+@@ -6793,6 +6795,7 @@ static int raid456_cpu_up_prepare(unsign
  			__func__, cpu);
  		return -ENOMEM;
  	}
@@ -9416,7 +9416,7 @@
  	return 0;
  }
  
-@@ -6784,7 +6787,6 @@ static int raid5_alloc_percpu(struct r5c
+@@ -6803,7 +6806,6 @@ static int raid5_alloc_percpu(struct r5c
  	conf->percpu = alloc_percpu(struct raid5_percpu);
  	if (!conf->percpu)
  		return -ENOMEM;
@@ -11119,7 +11119,7 @@
  out:
 --- a/fs/nfs/nfs4state.c
 +++ b/fs/nfs/nfs4state.c
-@@ -494,7 +494,7 @@ nfs4_alloc_state_owner(struct nfs_server
+@@ -498,7 +498,7 @@ nfs4_alloc_state_owner(struct nfs_server
  	nfs4_init_seqid_counter(&sp->so_seqid);
  	atomic_set(&sp->so_count, 1);
  	INIT_LIST_HEAD(&sp->so_lru);
@@ -11128,7 +11128,7 @@
  	mutex_init(&sp->so_delegreturn_mutex);
  	return sp;
  }
-@@ -1521,8 +1521,12 @@ static int nfs4_reclaim_open_state(struc
+@@ -1525,8 +1525,12 @@ static int nfs4_reclaim_open_state(struc
  	 * recovering after a network partition or a reboot from a
  	 * server that doesn't support a grace period.
  	 */
@@ -11142,7 +11142,7 @@
  restart:
  	list_for_each_entry(state, &sp->so_states, open_states) {
  		if (!test_and_clear_bit(ops->state_flag_bit, &state->flags))
-@@ -1591,14 +1595,20 @@ restart:
+@@ -1595,14 +1599,20 @@ restart:
  		spin_lock(&sp->so_lock);
  		goto restart;
  	}
@@ -15109,7 +15109,7 @@
  };
  
  struct sk_buff;
-@@ -1689,6 +1690,12 @@ static inline void skb_queue_head_init(s
+@@ -1691,6 +1692,12 @@ static inline void skb_queue_head_init(s
  	__skb_queue_head_init(list);
  }
  
@@ -27842,7 +27842,7 @@
  
  	return ret;
  }
-@@ -1406,8 +1408,8 @@ static int subsystem_open(struct inode *
+@@ -1403,8 +1405,8 @@ static int subsystem_open(struct inode *
  		return -ENODEV;
  
  	/* Make sure the system still exists */
@@ -27852,7 +27852,7 @@
  	list_for_each_entry(tr, &ftrace_trace_arrays, list) {
  		list_for_each_entry(dir, &tr->systems, list) {
  			if (dir == inode->i_private) {
-@@ -1421,8 +1423,8 @@ static int subsystem_open(struct inode *
+@@ -1418,8 +1420,8 @@ static int subsystem_open(struct inode *
  		}
  	}
   exit_loop:
@@ -27862,7 +27862,7 @@
  
  	if (!system)
  		return -ENODEV;
-@@ -2308,15 +2310,15 @@ static void __add_event_to_tracers(struc
+@@ -2305,15 +2307,15 @@ static void __add_event_to_tracers(struc
  int trace_add_event_call(struct trace_event_call *call)
  {
  	int ret;
@@ -27880,7 +27880,7 @@
  	return ret;
  }
  
-@@ -2370,13 +2372,13 @@ int trace_remove_event_call(struct trace
+@@ -2367,13 +2369,13 @@ int trace_remove_event_call(struct trace
  {
  	int ret;
  
@@ -27896,7 +27896,7 @@
  
  	return ret;
  }
-@@ -2438,8 +2440,8 @@ static int trace_module_notify(struct no
+@@ -2435,8 +2437,8 @@ static int trace_module_notify(struct no
  {
  	struct module *mod = data;
  
@@ -27906,7 +27906,7 @@
  	switch (val) {
  	case MODULE_STATE_COMING:
  		trace_module_add_events(mod);
-@@ -2448,8 +2450,8 @@ static int trace_module_notify(struct no
+@@ -2445,8 +2447,8 @@ static int trace_module_notify(struct no
  		trace_module_remove_events(mod);
  		break;
  	}
@@ -27916,7 +27916,7 @@
  
  	return 0;
  }
-@@ -2964,24 +2966,24 @@ create_event_toplevel_files(struct dentr
+@@ -2961,24 +2963,24 @@ create_event_toplevel_files(struct dentr
   * creates the event hierachry in the @parent/events directory.
   *
   * Returns 0 on success.
@@ -27946,7 +27946,7 @@
  	return ret;
  }
  
-@@ -3010,9 +3012,10 @@ early_event_add_tracer(struct dentry *pa
+@@ -3007,9 +3009,10 @@ early_event_add_tracer(struct dentry *pa
  	return ret;
  }
  
@@ -27958,7 +27958,7 @@
  
  	/* Disable any event triggers and associated soft-disabled events */
  	clear_event_triggers(tr);
-@@ -3033,8 +3036,6 @@ int event_trace_del_tracer(struct trace_
+@@ -3030,8 +3033,6 @@ int event_trace_del_tracer(struct trace_
  
  	tr->event_dir = NULL;
  
