@@ -3848,7 +3848,7 @@
  			if (unlikely(!user_mode(regs)))
 --- a/arch/arm/kernel/smp.c
 +++ b/arch/arm/kernel/smp.c
-@@ -266,8 +266,6 @@ int __cpu_disable(void)
+@@ -270,8 +270,6 @@ int __cpu_disable(void)
  	flush_cache_louis();
  	local_flush_tlb_all();
  
@@ -3857,7 +3857,7 @@
  	return 0;
  }
  
-@@ -285,6 +283,7 @@ void __cpu_die(unsigned int cpu)
+@@ -289,6 +287,7 @@ void __cpu_die(unsigned int cpu)
  	}
  	pr_debug("CPU%u: shutdown\n", cpu);
  
@@ -6727,7 +6727,7 @@
  	/*
 --- a/arch/x86/kvm/x86.c
 +++ b/arch/x86/kvm/x86.c
-@@ -6313,6 +6313,13 @@ int kvm_arch_init(void *opaque)
+@@ -6316,6 +6316,13 @@ int kvm_arch_init(void *opaque)
  		goto out;
  	}
  
@@ -9499,7 +9499,7 @@
  };
  
  struct mvpp2_queue_vector {
-@@ -5955,46 +5954,34 @@ static void mvpp2_link_event(struct net_
+@@ -5953,46 +5952,34 @@ static void mvpp2_link_event(struct net_
  	}
  }
  
@@ -9562,7 +9562,7 @@
  	return HRTIMER_NORESTART;
  }
  
-@@ -6484,7 +6471,12 @@ out:
+@@ -6482,7 +6469,12 @@ out:
  	    txq_pcpu->count > 0) {
  		struct mvpp2_port_pcpu *port_pcpu = this_cpu_ptr(port->pcpu);
  
@@ -9576,7 +9576,7 @@
  	}
  
  	return NETDEV_TX_OK;
-@@ -6875,7 +6867,6 @@ static int mvpp2_stop(struct net_device
+@@ -6873,7 +6865,6 @@ static int mvpp2_stop(struct net_device
  
  			hrtimer_cancel(&port_pcpu->tx_done_timer);
  			port_pcpu->timer_scheduled = false;
@@ -9584,7 +9584,7 @@
  		}
  	}
  	mvpp2_cleanup_rxqs(port);
-@@ -7648,13 +7639,10 @@ static int mvpp2_port_probe(struct platf
+@@ -7646,13 +7637,10 @@ static int mvpp2_port_probe(struct platf
  			port_pcpu = per_cpu_ptr(port->pcpu, cpu);
  
  			hrtimer_init(&port_pcpu->tx_done_timer, CLOCK_MONOTONIC,
@@ -11686,7 +11686,7 @@
  #endif /* defined(_LINUX_DELAY_H) */
 --- a/include/linux/fs.h
 +++ b/include/linux/fs.h
-@@ -657,7 +657,7 @@ struct inode {
+@@ -660,7 +660,7 @@ struct inode {
  		struct block_device	*i_bdev;
  		struct cdev		*i_cdev;
  		char			*i_link;
@@ -13970,7 +13970,7 @@
  
  #else /* #ifdef CONFIG_PREEMPT_RCU */
  
-@@ -99,6 +109,8 @@ static inline int rcu_preempt_depth(void
+@@ -97,6 +107,8 @@ static inline int rcu_preempt_depth(void
  	return 0;
  }
  
@@ -13979,7 +13979,7 @@
  #endif /* #else #ifdef CONFIG_PREEMPT_RCU */
  
  /* Internal to kernel */
-@@ -255,7 +267,14 @@ extern struct lockdep_map rcu_sched_lock
+@@ -253,7 +265,14 @@ extern struct lockdep_map rcu_sched_lock
  extern struct lockdep_map rcu_callback_map;
  int debug_lockdep_rcu_enabled(void);
  int rcu_read_lock_held(void);
@@ -13994,7 +13994,7 @@
  int rcu_read_lock_sched_held(void);
  
  #else /* #ifdef CONFIG_DEBUG_LOCK_ALLOC */
-@@ -365,54 +384,6 @@ static inline void rcu_preempt_sleep_che
+@@ -363,54 +382,6 @@ static inline void rcu_preempt_sleep_che
  })
  
  /**
@@ -14049,7 +14049,7 @@
   * rcu_swap_protected() - swap an RCU and a regular pointer
   * @rcu_ptr: RCU pointer
   * @ptr: regular pointer
-@@ -707,10 +678,14 @@ static inline void rcu_read_unlock(void)
+@@ -705,10 +676,14 @@ static inline void rcu_read_unlock(void)
  static inline void rcu_read_lock_bh(void)
  {
  	local_bh_disable();
@@ -14064,7 +14064,7 @@
  }
  
  /*
-@@ -720,10 +695,14 @@ static inline void rcu_read_lock_bh(void
+@@ -718,10 +693,14 @@ static inline void rcu_read_lock_bh(void
   */
  static inline void rcu_read_unlock_bh(void)
  {
@@ -19992,7 +19992,7 @@
  	return 0;
 --- a/kernel/power/hibernate.c
 +++ b/kernel/power/hibernate.c
-@@ -287,6 +287,8 @@ static int create_image(int platform_mod
+@@ -292,6 +292,8 @@ static int create_image(int platform_mod
  
  	local_irq_disable();
  
@@ -20001,7 +20001,7 @@
  	error = syscore_suspend();
  	if (error) {
  		pr_err("Some system devices failed to power down, aborting hibernation\n");
-@@ -317,6 +319,7 @@ static int create_image(int platform_mod
+@@ -322,6 +324,7 @@ static int create_image(int platform_mod
  	syscore_resume();
  
   Enable_irqs:
@@ -20009,7 +20009,7 @@
  	local_irq_enable();
  
   Enable_cpus:
-@@ -445,6 +448,7 @@ static int resume_target_kernel(bool pla
+@@ -454,6 +457,7 @@ static int resume_target_kernel(bool pla
  		goto Enable_cpus;
  
  	local_irq_disable();
@@ -20017,7 +20017,7 @@
  
  	error = syscore_suspend();
  	if (error)
-@@ -478,6 +482,7 @@ static int resume_target_kernel(bool pla
+@@ -487,6 +491,7 @@ static int resume_target_kernel(bool pla
  	syscore_resume();
  
   Enable_irqs:
@@ -20025,7 +20025,7 @@
  	local_irq_enable();
  
   Enable_cpus:
-@@ -563,6 +568,7 @@ int hibernation_platform_enter(void)
+@@ -572,6 +577,7 @@ int hibernation_platform_enter(void)
  		goto Enable_cpus;
  
  	local_irq_disable();
@@ -20033,7 +20033,7 @@
  	syscore_suspend();
  	if (pm_wakeup_pending()) {
  		error = -EAGAIN;
-@@ -575,6 +581,7 @@ int hibernation_platform_enter(void)
+@@ -584,6 +590,7 @@ int hibernation_platform_enter(void)
  
   Power_up:
  	syscore_resume();
@@ -20041,7 +20041,7 @@
  	local_irq_enable();
  
   Enable_cpus:
-@@ -672,6 +679,10 @@ static int load_image_and_restore(void)
+@@ -681,6 +688,10 @@ static int load_image_and_restore(void)
  	return error;
  }
  
@@ -20052,7 +20052,7 @@
  /**
   * hibernate - Carry out system hibernation, including saving the image.
   */
-@@ -685,6 +696,8 @@ int hibernate(void)
+@@ -694,6 +705,8 @@ int hibernate(void)
  		return -EPERM;
  	}
  
@@ -20061,7 +20061,7 @@
  	lock_system_sleep();
  	/* The snapshot device should not be opened while we're running */
  	if (!atomic_add_unless(&snapshot_device_available, -1, 0)) {
-@@ -763,6 +776,7 @@ int hibernate(void)
+@@ -772,6 +785,7 @@ int hibernate(void)
  	atomic_inc(&snapshot_device_available);
   Unlock:
  	unlock_system_sleep();
@@ -39112,7 +39112,7 @@
  	return __this_cpu_read(kvm_arm_running_vcpu);
  }
  
-@@ -652,7 +650,7 @@ int kvm_arch_vcpu_ioctl_run(struct kvm_v
+@@ -655,7 +653,7 @@ int kvm_arch_vcpu_ioctl_run(struct kvm_v
  		 * involves poking the GIC, which must be done in a
  		 * non-preemptible context.
  		 */
@@ -39121,7 +39121,7 @@
  
  		kvm_pmu_flush_hwstate(vcpu);
  
-@@ -689,7 +687,7 @@ int kvm_arch_vcpu_ioctl_run(struct kvm_v
+@@ -692,7 +690,7 @@ int kvm_arch_vcpu_ioctl_run(struct kvm_v
  			kvm_pmu_sync_hwstate(vcpu);
  			kvm_timer_sync_hwstate(vcpu);
  			kvm_vgic_sync_hwstate(vcpu);
@@ -39130,7 +39130,7 @@
  			continue;
  		}
  
-@@ -744,7 +742,7 @@ int kvm_arch_vcpu_ioctl_run(struct kvm_v
+@@ -747,7 +745,7 @@ int kvm_arch_vcpu_ioctl_run(struct kvm_v
  
  		kvm_vgic_sync_hwstate(vcpu);
  
