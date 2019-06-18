@@ -1,9 +1,9 @@
-4.19.37-rt20
+4.19.50-rt22
 
 --- /dev/null
 +++ b/source/localversion-rt
 @@ -0,0 +1 @@
-+-rt20
++-rt22
 --- a/arch/Kconfig
 +++ b/arch/Kconfig
 @@ -28,6 +28,7 @@ config OPROFILE
@@ -2765,7 +2765,7 @@
  	/*
 --- a/arch/x86/kvm/x86.c
 +++ b/arch/x86/kvm/x86.c
-@@ -6753,6 +6753,13 @@ int kvm_arch_init(void *opaque)
+@@ -6756,6 +6756,13 @@ int kvm_arch_init(void *opaque)
  		goto out;
  	}
  
@@ -3405,15 +3405,7 @@
  #endif
 --- a/drivers/char/random.c
 +++ b/drivers/char/random.c
-@@ -265,6 +265,7 @@
- #include <linux/syscalls.h>
- #include <linux/completion.h>
- #include <linux/uuid.h>
-+#include <linux/locallock.h>
- #include <crypto/chacha20.h>
- 
- #include <asm/processor.h>
-@@ -1229,28 +1230,27 @@ static __u32 get_reg(struct fast_pool *f
+@@ -1232,28 +1232,27 @@ static __u32 get_reg(struct fast_pool *f
  	return *ptr;
  }
  
@@ -3447,56 +3439,6 @@
  
  	fast_mix(fast_pool);
  	add_interrupt_bench(cycles);
-@@ -2224,6 +2224,7 @@ static rwlock_t batched_entropy_reset_lo
-  * at any point prior.
-  */
- static DEFINE_PER_CPU(struct batched_entropy, batched_entropy_u64);
-+static DEFINE_LOCAL_IRQ_LOCK(batched_entropy_u64_lock);
- u64 get_random_u64(void)
- {
- 	u64 ret;
-@@ -2244,7 +2245,7 @@ u64 get_random_u64(void)
- 	warn_unseeded_randomness(&previous);
- 
- 	use_lock = READ_ONCE(crng_init) < 2;
--	batch = &get_cpu_var(batched_entropy_u64);
-+	batch = &get_locked_var(batched_entropy_u64_lock, batched_entropy_u64);
- 	if (use_lock)
- 		read_lock_irqsave(&batched_entropy_reset_lock, flags);
- 	if (batch->position % ARRAY_SIZE(batch->entropy_u64) == 0) {
-@@ -2254,12 +2255,13 @@ u64 get_random_u64(void)
- 	ret = batch->entropy_u64[batch->position++];
- 	if (use_lock)
- 		read_unlock_irqrestore(&batched_entropy_reset_lock, flags);
--	put_cpu_var(batched_entropy_u64);
-+	put_locked_var(batched_entropy_u64_lock, batched_entropy_u64);
- 	return ret;
- }
- EXPORT_SYMBOL(get_random_u64);
- 
- static DEFINE_PER_CPU(struct batched_entropy, batched_entropy_u32);
-+static DEFINE_LOCAL_IRQ_LOCK(batched_entropy_u32_lock);
- u32 get_random_u32(void)
- {
- 	u32 ret;
-@@ -2274,7 +2276,7 @@ u32 get_random_u32(void)
- 	warn_unseeded_randomness(&previous);
- 
- 	use_lock = READ_ONCE(crng_init) < 2;
--	batch = &get_cpu_var(batched_entropy_u32);
-+	batch = &get_locked_var(batched_entropy_u32_lock, batched_entropy_u32);
- 	if (use_lock)
- 		read_lock_irqsave(&batched_entropy_reset_lock, flags);
- 	if (batch->position % ARRAY_SIZE(batch->entropy_u32) == 0) {
-@@ -2284,7 +2286,7 @@ u32 get_random_u32(void)
- 	ret = batch->entropy_u32[batch->position++];
- 	if (use_lock)
- 		read_unlock_irqrestore(&batched_entropy_reset_lock, flags);
--	put_cpu_var(batched_entropy_u32);
-+	put_locked_var(batched_entropy_u32_lock, batched_entropy_u32);
- 	return ret;
- }
- EXPORT_SYMBOL(get_random_u32);
 --- a/drivers/char/tpm/tpm_tis.c
 +++ b/drivers/char/tpm/tpm_tis.c
 @@ -53,6 +53,31 @@ static inline struct tpm_tis_tcg_phy *to
@@ -8734,7 +8676,7 @@
  
  #else /* #ifdef CONFIG_PREEMPT_RCU */
  
-@@ -98,6 +108,8 @@ static inline int rcu_preempt_depth(void
+@@ -96,6 +106,8 @@ static inline int rcu_preempt_depth(void
  	return 0;
  }
  
@@ -8743,7 +8685,7 @@
  #endif /* #else #ifdef CONFIG_PREEMPT_RCU */
  
  /* Internal to kernel */
-@@ -255,7 +267,14 @@ extern struct lockdep_map rcu_sched_lock
+@@ -253,7 +265,14 @@ extern struct lockdep_map rcu_sched_lock
  extern struct lockdep_map rcu_callback_map;
  int debug_lockdep_rcu_enabled(void);
  int rcu_read_lock_held(void);
@@ -8758,7 +8700,7 @@
  int rcu_read_lock_sched_held(void);
  
  #else /* #ifdef CONFIG_DEBUG_LOCK_ALLOC */
-@@ -365,54 +384,6 @@ static inline void rcu_preempt_sleep_che
+@@ -363,54 +382,6 @@ static inline void rcu_preempt_sleep_che
  })
  
  /**
@@ -8813,7 +8755,7 @@
   * rcu_swap_protected() - swap an RCU and a regular pointer
   * @rcu_ptr: RCU pointer
   * @ptr: regular pointer
-@@ -703,10 +674,14 @@ static inline void rcu_read_unlock(void)
+@@ -701,10 +672,14 @@ static inline void rcu_read_unlock(void)
  static inline void rcu_read_lock_bh(void)
  {
  	local_bh_disable();
@@ -8828,7 +8770,7 @@
  }
  
  /*
-@@ -716,10 +691,14 @@ static inline void rcu_read_lock_bh(void
+@@ -714,10 +689,14 @@ static inline void rcu_read_lock_bh(void
   */
  static inline void rcu_read_unlock_bh(void)
  {
@@ -10749,7 +10691,7 @@
 +#endif /* __SOC_ATMEL_TCB_H */
 --- a/init/Kconfig
 +++ b/init/Kconfig
-@@ -781,6 +781,7 @@ config CFS_BANDWIDTH
+@@ -784,6 +784,7 @@ config CFS_BANDWIDTH
  config RT_GROUP_SCHED
  	bool "Group scheduling for SCHED_RR/FIFO"
  	depends on CGROUP_SCHED
@@ -10757,7 +10699,7 @@
  	default n
  	help
  	  This feature lets you explicitly allocate real CPU bandwidth
-@@ -1658,6 +1659,7 @@ choice
+@@ -1661,6 +1662,7 @@ choice
  
  config SLAB
  	bool "SLAB"
@@ -10765,7 +10707,7 @@
  	select HAVE_HARDENED_USERCOPY_ALLOCATOR
  	help
  	  The regular slab allocator that is established and known to work
-@@ -1678,6 +1680,7 @@ config SLUB
+@@ -1681,6 +1683,7 @@ config SLUB
  config SLOB
  	depends on EXPERT
  	bool "SLOB (Simple Allocator)"
@@ -10773,7 +10715,7 @@
  	help
  	   SLOB replaces the stock allocator with a drastically simpler
  	   allocator. SLOB is generally more space efficient but
-@@ -1719,7 +1722,7 @@ config SLAB_FREELIST_HARDENED
+@@ -1722,7 +1725,7 @@ config SLAB_FREELIST_HARDENED
  
  config SLUB_CPU_PARTIAL
  	default y
@@ -10922,7 +10864,7 @@
  	struct cgroup_subsys *ss = css->ss;
  	struct cgroup *cgrp = css->cgroup;
  
-@@ -4691,8 +4691,8 @@ static void css_release(struct percpu_re
+@@ -4693,8 +4693,8 @@ static void css_release(struct percpu_re
  	struct cgroup_subsys_state *css =
  		container_of(ref, struct cgroup_subsys_state, refcnt);
  
@@ -10933,7 +10875,7 @@
  }
  
  static void init_and_link_css(struct cgroup_subsys_state *css,
-@@ -5414,6 +5414,7 @@ static int __init cgroup_wq_init(void)
+@@ -5420,6 +5420,7 @@ static int __init cgroup_wq_init(void)
  	 */
  	cgroup_destroy_wq = alloc_workqueue("cgroup_destroy", 0, 1);
  	BUG_ON(!cgroup_destroy_wq);
@@ -11846,17 +11788,18 @@
  	}
  
  	raw_spin_lock_irqsave(&desc->lock, flags);
-@@ -357,7 +396,9 @@ irq_set_affinity_notifier(unsigned int i
+@@ -357,7 +396,10 @@ irq_set_affinity_notifier(unsigned int i
  	raw_spin_unlock_irqrestore(&desc->lock, flags);
  
  	if (old_notify) {
 +#ifndef CONFIG_PREEMPT_RT_BASE
++		/* Need to address this for PREEMPT_RT */
  		cancel_work_sync(&old_notify->work);
 +#endif
  		kref_put(&old_notify->kref, old_notify->release);
  	}
  
-@@ -936,7 +977,15 @@ irq_forced_thread_fn(struct irq_desc *de
+@@ -936,7 +978,15 @@ irq_forced_thread_fn(struct irq_desc *de
  		atomic_inc(&desc->threads_handled);
  
  	irq_finalize_oneshot(desc, action);
@@ -11873,7 +11816,7 @@
  	return ret;
  }
  
-@@ -1034,6 +1083,12 @@ static int irq_thread(void *data)
+@@ -1034,6 +1084,12 @@ static int irq_thread(void *data)
  		if (action_ret == IRQ_WAKE_THREAD)
  			irq_wake_secondary(desc, action);
  
@@ -11886,7 +11829,7 @@
  		wake_threads_waitq(desc);
  	}
  
-@@ -1446,6 +1501,9 @@ __setup_irq(unsigned int irq, struct irq
+@@ -1446,6 +1502,9 @@ __setup_irq(unsigned int irq, struct irq
  			irqd_set(&desc->irq_data, IRQD_NO_BALANCING);
  		}
  
@@ -11896,7 +11839,7 @@
  		if (irq_settings_can_autoenable(desc)) {
  			irq_startup(desc, IRQ_RESEND, IRQ_START_COND);
  		} else {
-@@ -2229,7 +2287,7 @@ EXPORT_SYMBOL_GPL(irq_get_irqchip_state)
+@@ -2229,7 +2288,7 @@ EXPORT_SYMBOL_GPL(irq_get_irqchip_state)
   *	This call sets the internal irqchip state of an interrupt,
   *	depending on the value of @which.
   *
@@ -11974,43 +11917,13 @@
  #include <asm/processor.h>
  
  
-@@ -64,6 +65,8 @@ void __weak arch_irq_work_raise(void)
-  */
- bool irq_work_queue_on(struct irq_work *work, int cpu)
+@@ -57,29 +58,35 @@ void __weak arch_irq_work_raise(void)
+ }
+ 
+ /* Enqueue on current CPU, work must already be claimed and preempt disabled */
+-static void __irq_work_queue_local(struct irq_work *work)
++static void __irq_work_queue_local(struct irq_work *work, struct llist_head *list)
  {
-+	struct llist_head *list;
-+
- 	/* All work should have been flushed before going offline */
- 	WARN_ON_ONCE(cpu_is_offline(cpu));
- 
-@@ -76,7 +79,12 @@ bool irq_work_queue_on(struct irq_work *
- 	if (!irq_work_claim(work))
- 		return false;
- 
--	if (llist_add(&work->llnode, &per_cpu(raised_list, cpu)))
-+	if (IS_ENABLED(CONFIG_PREEMPT_RT_FULL) && !(work->flags & IRQ_WORK_HARD_IRQ))
-+		list = &per_cpu(lazy_list, cpu);
-+	else
-+		list = &per_cpu(raised_list, cpu);
-+
-+	if (llist_add(&work->llnode, list))
- 		arch_send_call_function_single_ipi(cpu);
- 
- #else /* #ifdef CONFIG_SMP */
-@@ -89,6 +97,9 @@ bool irq_work_queue_on(struct irq_work *
- /* Enqueue the irq work @work on the current CPU */
- bool irq_work_queue(struct irq_work *work)
- {
-+	struct llist_head *list;
-+	bool lazy_work, realtime = IS_ENABLED(CONFIG_PREEMPT_RT_FULL);
-+
- 	/* Only queue if not already pending */
- 	if (!irq_work_claim(work))
- 		return false;
-@@ -96,13 +107,15 @@ bool irq_work_queue(struct irq_work *wor
- 	/* Queue the entry and raise the IPI if needed. */
- 	preempt_disable();
- 
 -	/* If the work is "lazy", handle it from next tick if any */
 -	if (work->flags & IRQ_WORK_LAZY) {
 -		if (llist_add(&work->llnode, this_cpu_ptr(&lazy_list)) &&
@@ -12018,19 +11931,74 @@
 -			arch_irq_work_raise();
 -	} else {
 -		if (llist_add(&work->llnode, this_cpu_ptr(&raised_list)))
-+	lazy_work = work->flags & IRQ_WORK_LAZY;
+-			arch_irq_work_raise();
+-	}
++	bool empty;
 +
-+	if (lazy_work || (realtime && !(work->flags & IRQ_WORK_HARD_IRQ)))
++	empty = llist_add(&work->llnode, list);
++
++	if (empty &&
++	    (!(work->flags & IRQ_WORK_LAZY) ||
++	     tick_nohz_tick_stopped()))
++		arch_irq_work_raise();
+ }
+ 
+ /* Enqueue the irq work @work on the current CPU */
+ bool irq_work_queue(struct irq_work *work)
+ {
++	struct llist_head *list;
++
+ 	/* Only queue if not already pending */
+ 	if (!irq_work_claim(work))
+ 		return false;
+ 
+ 	/* Queue the entry and raise the IPI if needed. */
+ 	preempt_disable();
+-	__irq_work_queue_local(work);
++	if (IS_ENABLED(CONFIG_PREEMPT_RT_FULL) && !(work->flags & IRQ_WORK_HARD_IRQ))
 +		list = this_cpu_ptr(&lazy_list);
 +	else
 +		list = this_cpu_ptr(&raised_list);
 +
-+	if (llist_add(&work->llnode, list)) {
-+		if (!lazy_work || tick_nohz_tick_stopped())
- 			arch_irq_work_raise();
- 	}
++	__irq_work_queue_local(work, list);
+ 	preempt_enable();
  
-@@ -119,9 +132,8 @@ bool irq_work_needs_cpu(void)
+ 	return true;
+@@ -98,6 +105,9 @@ bool irq_work_queue_on(struct irq_work *
+ 	return irq_work_queue(work);
+ 
+ #else /* CONFIG_SMP: */
++	struct llist_head *list;
++	bool lazy_work, realtime = IS_ENABLED(CONFIG_PREEMPT_RT_FULL);
++
+ 	/* All work should have been flushed before going offline */
+ 	WARN_ON_ONCE(cpu_is_offline(cpu));
+ 
+@@ -106,13 +116,21 @@ bool irq_work_queue_on(struct irq_work *
+ 		return false;
+ 
+ 	preempt_disable();
++
++	lazy_work = work->flags & IRQ_WORK_LAZY;
++
++	if (lazy_work || (realtime && !(work->flags & IRQ_WORK_HARD_IRQ)))
++		list = &per_cpu(lazy_list, cpu);
++	else
++		list = &per_cpu(raised_list, cpu);
++
+ 	if (cpu != smp_processor_id()) {
+ 		/* Arch remote IPI send/receive backend aren't NMI safe */
+ 		WARN_ON_ONCE(in_nmi());
+-		if (llist_add(&work->llnode, &per_cpu(raised_list, cpu)))
++		if (llist_add(&work->llnode, list))
+ 			arch_send_call_function_single_ipi(cpu);
+ 	} else {
+-		__irq_work_queue_local(work);
++		__irq_work_queue_local(work, list);
+ 	}
+ 	preempt_enable();
+ 
+@@ -128,9 +146,8 @@ bool irq_work_needs_cpu(void)
  	raised = this_cpu_ptr(&raised_list);
  	lazy = this_cpu_ptr(&lazy_list);
  
@@ -12042,7 +12010,7 @@
  
  	/* All work should have been flushed before going offline */
  	WARN_ON_ONCE(cpu_is_offline(smp_processor_id()));
-@@ -135,8 +147,12 @@ static void irq_work_run_list(struct lli
+@@ -144,8 +161,12 @@ static void irq_work_run_list(struct lli
  	struct llist_node *llnode;
  	unsigned long flags;
  
@@ -12056,7 +12024,7 @@
  	if (llist_empty(list))
  		return;
  
-@@ -168,7 +184,16 @@ static void irq_work_run_list(struct lli
+@@ -177,7 +198,16 @@ static void irq_work_run_list(struct lli
  void irq_work_run(void)
  {
  	irq_work_run_list(this_cpu_ptr(&raised_list));
@@ -12074,7 +12042,7 @@
  }
  EXPORT_SYMBOL_GPL(irq_work_run);
  
-@@ -178,8 +203,17 @@ void irq_work_tick(void)
+@@ -187,8 +217,17 @@ void irq_work_tick(void)
  
  	if (!llist_empty(raised) && !arch_irq_work_has_interrupt())
  		irq_work_run_list(raised);
@@ -14732,7 +14700,7 @@
  	return 0;
 --- a/kernel/power/hibernate.c
 +++ b/kernel/power/hibernate.c
-@@ -681,6 +681,10 @@ static int load_image_and_restore(void)
+@@ -690,6 +690,10 @@ static int load_image_and_restore(void)
  	return error;
  }
  
@@ -14743,7 +14711,7 @@
  /**
   * hibernate - Carry out system hibernation, including saving the image.
   */
-@@ -694,6 +698,8 @@ int hibernate(void)
+@@ -703,6 +707,8 @@ int hibernate(void)
  		return -EPERM;
  	}
  
@@ -14752,7 +14720,7 @@
  	lock_system_sleep();
  	/* The snapshot device should not be opened while we're running */
  	if (!atomic_add_unless(&snapshot_device_available, -1, 0)) {
-@@ -772,6 +778,7 @@ int hibernate(void)
+@@ -781,6 +787,7 @@ int hibernate(void)
  	atomic_inc(&snapshot_device_available);
   Unlock:
  	unlock_system_sleep();
@@ -16777,7 +16745,7 @@
  
  	return (nested == preempt_offset);
  }
-@@ -7061,3 +7195,196 @@ const u32 sched_prio_to_wmult[40] = {
+@@ -7068,3 +7202,196 @@ const u32 sched_prio_to_wmult[40] = {
  };
  
  #undef CREATE_TRACE_POINTS
@@ -17372,7 +17340,7 @@
  				raw_spin_unlock_irqrestore(&busiest->lock,
  							    flags);
  				env.flags |= LBF_ALL_PINNED;
-@@ -9728,7 +9730,7 @@ static void task_fork_fair(struct task_s
+@@ -9732,7 +9734,7 @@ static void task_fork_fair(struct task_s
  		 * 'current' within the tree based on its new key value.
  		 */
  		swap(curr->vruntime, se->vruntime);
@@ -17381,7 +17349,7 @@
  	}
  
  	se->vruntime -= cfs_rq->min_vruntime;
-@@ -9752,7 +9754,7 @@ prio_changed_fair(struct rq *rq, struct
+@@ -9756,7 +9758,7 @@ prio_changed_fair(struct rq *rq, struct
  	 */
  	if (rq->curr == p) {
  		if (p->prio > oldprio)
@@ -21003,7 +20971,7 @@
 --- /dev/null
 +++ b/localversion-rt
 @@ -0,0 +1 @@
-+-rt20-rc1
++-rt22
 --- a/mm/Kconfig
 +++ b/mm/Kconfig
 @@ -377,7 +377,7 @@ config NOMMU_INITIAL_TRIM_EXCESS
@@ -24079,7 +24047,7 @@
   * LSM hook functions
 --- a/virt/kvm/arm/arm.c
 +++ b/virt/kvm/arm/arm.c
-@@ -709,7 +709,7 @@ int kvm_arch_vcpu_ioctl_run(struct kvm_v
+@@ -712,7 +712,7 @@ int kvm_arch_vcpu_ioctl_run(struct kvm_v
  		 * involves poking the GIC, which must be done in a
  		 * non-preemptible context.
  		 */
@@ -24088,7 +24056,7 @@
  
  		kvm_pmu_flush_hwstate(vcpu);
  
-@@ -758,7 +758,7 @@ int kvm_arch_vcpu_ioctl_run(struct kvm_v
+@@ -761,7 +761,7 @@ int kvm_arch_vcpu_ioctl_run(struct kvm_v
  				kvm_timer_sync_hwstate(vcpu);
  			kvm_vgic_sync_hwstate(vcpu);
  			local_irq_enable();
@@ -24097,7 +24065,7 @@
  			continue;
  		}
  
-@@ -836,7 +836,7 @@ int kvm_arch_vcpu_ioctl_run(struct kvm_v
+@@ -839,7 +839,7 @@ int kvm_arch_vcpu_ioctl_run(struct kvm_v
  		/* Exit types that need handling before we can be preempted */
  		handle_exit_early(vcpu, run, ret);
  
