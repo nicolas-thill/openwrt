@@ -7026,7 +7026,7 @@
  #endif /* defined(_LINUX_DELAY_H) */
 --- a/include/linux/fs.h
 +++ b/include/linux/fs.h
-@@ -691,7 +691,7 @@ struct inode {
+@@ -694,7 +694,7 @@ struct inode {
  		struct block_device	*i_bdev;
  		struct cdev		*i_cdev;
  		char			*i_link;
@@ -9012,7 +9012,7 @@
  
  #else /* #ifdef CONFIG_PREEMPT_RCU */
  
-@@ -326,6 +336,8 @@ static inline int rcu_preempt_depth(void
+@@ -324,6 +334,8 @@ static inline int rcu_preempt_depth(void
  	return 0;
  }
  
@@ -9021,7 +9021,7 @@
  #endif /* #else #ifdef CONFIG_PREEMPT_RCU */
  
  /* Internal to kernel */
-@@ -505,7 +517,14 @@ extern struct lockdep_map rcu_callback_m
+@@ -503,7 +515,14 @@ extern struct lockdep_map rcu_callback_m
  int debug_lockdep_rcu_enabled(void);
  
  int rcu_read_lock_held(void);
@@ -9036,7 +9036,7 @@
  
  /**
   * rcu_read_lock_sched_held() - might we be in RCU-sched read-side critical section?
-@@ -626,54 +645,6 @@ static inline void rcu_preempt_sleep_che
+@@ -624,54 +643,6 @@ static inline void rcu_preempt_sleep_che
  })
  
  /**
@@ -9091,7 +9091,7 @@
   * rcu_access_pointer() - fetch RCU pointer with no dereferencing
   * @p: The pointer to read
   *
-@@ -951,10 +922,14 @@ static inline void rcu_read_unlock(void)
+@@ -949,10 +920,14 @@ static inline void rcu_read_unlock(void)
  static inline void rcu_read_lock_bh(void)
  {
  	local_bh_disable();
@@ -9106,7 +9106,7 @@
  }
  
  /*
-@@ -964,10 +939,14 @@ static inline void rcu_read_lock_bh(void
+@@ -962,10 +937,14 @@ static inline void rcu_read_lock_bh(void
   */
  static inline void rcu_read_unlock_bh(void)
  {
@@ -16682,7 +16682,7 @@
  	return 0;
 --- a/kernel/power/hibernate.c
 +++ b/kernel/power/hibernate.c
-@@ -286,6 +286,8 @@ static int create_image(int platform_mod
+@@ -291,6 +291,8 @@ static int create_image(int platform_mod
  
  	local_irq_disable();
  
@@ -16691,7 +16691,7 @@
  	error = syscore_suspend();
  	if (error) {
  		printk(KERN_ERR "PM: Some system devices failed to power down, "
-@@ -317,6 +319,7 @@ static int create_image(int platform_mod
+@@ -322,6 +324,7 @@ static int create_image(int platform_mod
  	syscore_resume();
  
   Enable_irqs:
@@ -16699,7 +16699,7 @@
  	local_irq_enable();
  
   Enable_cpus:
-@@ -446,6 +449,7 @@ static int resume_target_kernel(bool pla
+@@ -455,6 +458,7 @@ static int resume_target_kernel(bool pla
  		goto Enable_cpus;
  
  	local_irq_disable();
@@ -16707,7 +16707,7 @@
  
  	error = syscore_suspend();
  	if (error)
-@@ -479,6 +483,7 @@ static int resume_target_kernel(bool pla
+@@ -488,6 +492,7 @@ static int resume_target_kernel(bool pla
  	syscore_resume();
  
   Enable_irqs:
@@ -16715,7 +16715,7 @@
  	local_irq_enable();
  
   Enable_cpus:
-@@ -564,6 +569,7 @@ int hibernation_platform_enter(void)
+@@ -573,6 +578,7 @@ int hibernation_platform_enter(void)
  		goto Enable_cpus;
  
  	local_irq_disable();
@@ -16723,7 +16723,7 @@
  	syscore_suspend();
  	if (pm_wakeup_pending()) {
  		error = -EAGAIN;
-@@ -576,6 +582,7 @@ int hibernation_platform_enter(void)
+@@ -585,6 +591,7 @@ int hibernation_platform_enter(void)
  
   Power_up:
  	syscore_resume();
@@ -16731,7 +16731,7 @@
  	local_irq_enable();
  
   Enable_cpus:
-@@ -676,6 +683,10 @@ static int load_image_and_restore(void)
+@@ -685,6 +692,10 @@ static int load_image_and_restore(void)
  	return error;
  }
  
@@ -16742,7 +16742,7 @@
  /**
   * hibernate - Carry out system hibernation, including saving the image.
   */
-@@ -689,6 +700,8 @@ int hibernate(void)
+@@ -698,6 +709,8 @@ int hibernate(void)
  		return -EPERM;
  	}
  
@@ -16751,7 +16751,7 @@
  	lock_system_sleep();
  	/* The snapshot device should not be opened while we're running */
  	if (!atomic_add_unless(&snapshot_device_available, -1, 0)) {
-@@ -766,6 +779,7 @@ int hibernate(void)
+@@ -775,6 +788,7 @@ int hibernate(void)
  	atomic_inc(&snapshot_device_available);
   Unlock:
  	unlock_system_sleep();
