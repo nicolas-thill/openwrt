@@ -3848,7 +3848,7 @@
  			if (unlikely(!user_mode(regs)))
 --- a/arch/arm/kernel/smp.c
 +++ b/arch/arm/kernel/smp.c
-@@ -266,8 +266,6 @@ int __cpu_disable(void)
+@@ -270,8 +270,6 @@ int __cpu_disable(void)
  	flush_cache_louis();
  	local_flush_tlb_all();
  
@@ -3857,7 +3857,7 @@
  	return 0;
  }
  
-@@ -285,6 +283,7 @@ void __cpu_die(unsigned int cpu)
+@@ -289,6 +287,7 @@ void __cpu_die(unsigned int cpu)
  	}
  	pr_debug("CPU%u: shutdown\n", cpu);
  
@@ -4847,7 +4847,7 @@
  
  config GENERIC_LOCKBREAK
  	bool
-@@ -215,6 +216,7 @@ config PPC
+@@ -216,6 +217,7 @@ config PPC
  	select HAVE_HARDLOCKUP_DETECTOR_PERF	if PERF_EVENTS && HAVE_PERF_EVENTS_NMI && !HAVE_HARDLOCKUP_DETECTOR_ARCH
  	select HAVE_PERF_REGS
  	select HAVE_PERF_USER_STACK_DUMP
@@ -4855,7 +4855,7 @@
  	select HAVE_RCU_TABLE_FREE		if SMP
  	select HAVE_REGS_AND_STACK_ACCESS_API
  	select HAVE_SYSCALL_TRACEPOINTS
-@@ -395,7 +397,7 @@ menu "Kernel options"
+@@ -396,7 +398,7 @@ menu "Kernel options"
  
  config HIGHMEM
  	bool "High memory support"
@@ -6474,7 +6474,7 @@
  #include <linux/jump_label.h>
  
  #include <asm/intel-family.h>
-@@ -1366,7 +1367,7 @@ int memory_failure(unsigned long pfn, in
+@@ -1396,7 +1397,7 @@ int memory_failure(unsigned long pfn, in
  static unsigned long check_interval = INITIAL_CHECK_INTERVAL;
  
  static DEFINE_PER_CPU(unsigned long, mce_next_interval); /* in jiffies */
@@ -6483,7 +6483,7 @@
  
  static unsigned long mce_adjust_timer_default(unsigned long interval)
  {
-@@ -1375,27 +1376,19 @@ static unsigned long mce_adjust_timer_de
+@@ -1405,27 +1406,19 @@ static unsigned long mce_adjust_timer_de
  
  static unsigned long (*mce_adjust_timer)(unsigned long interval) = mce_adjust_timer_default;
  
@@ -6517,7 +6517,7 @@
  	iv = __this_cpu_read(mce_next_interval);
  
  	if (mce_available(this_cpu_ptr(&cpu_info))) {
-@@ -1418,7 +1411,11 @@ static void mce_timer_fn(unsigned long d
+@@ -1448,7 +1441,11 @@ static void mce_timer_fn(unsigned long d
  
  done:
  	__this_cpu_write(mce_next_interval, iv);
@@ -6530,7 +6530,7 @@
  }
  
  /*
-@@ -1426,7 +1423,7 @@ done:
+@@ -1456,7 +1453,7 @@ done:
   */
  void mce_timer_kick(unsigned long interval)
  {
@@ -6539,7 +6539,7 @@
  	unsigned long iv = __this_cpu_read(mce_next_interval);
  
  	__start_timer(t, interval);
-@@ -1441,7 +1438,7 @@ static void mce_timer_delete_all(void)
+@@ -1471,7 +1468,7 @@ static void mce_timer_delete_all(void)
  	int cpu;
  
  	for_each_online_cpu(cpu)
@@ -6548,7 +6548,7 @@
  }
  
  /*
-@@ -1770,7 +1767,7 @@ static void __mcheck_cpu_clear_vendor(st
+@@ -1800,7 +1797,7 @@ static void __mcheck_cpu_clear_vendor(st
  	}
  }
  
@@ -6557,7 +6557,7 @@
  {
  	unsigned long iv = check_interval * HZ;
  
-@@ -1783,18 +1780,19 @@ static void mce_start_timer(struct timer
+@@ -1813,18 +1810,19 @@ static void mce_start_timer(struct timer
  
  static void __mcheck_cpu_setup_timer(void)
  {
@@ -6583,7 +6583,7 @@
  	mce_start_timer(t);
  }
  
-@@ -2310,7 +2308,7 @@ static int mce_cpu_dead(unsigned int cpu
+@@ -2340,7 +2338,7 @@ static int mce_cpu_dead(unsigned int cpu
  
  static int mce_cpu_online(unsigned int cpu)
  {
@@ -6592,7 +6592,7 @@
  	int ret;
  
  	mce_device_create(cpu);
-@@ -2327,10 +2325,10 @@ static int mce_cpu_online(unsigned int c
+@@ -2357,10 +2355,10 @@ static int mce_cpu_online(unsigned int c
  
  static int mce_cpu_pre_down(unsigned int cpu)
  {
@@ -6727,7 +6727,7 @@
  	/*
 --- a/arch/x86/kvm/x86.c
 +++ b/arch/x86/kvm/x86.c
-@@ -6313,6 +6313,13 @@ int kvm_arch_init(void *opaque)
+@@ -6316,6 +6316,13 @@ int kvm_arch_init(void *opaque)
  		goto out;
  	}
  
@@ -6891,7 +6891,7 @@
  	WARN_ON_ONCE(q->mq_ops);
  
  	queue_flag_clear(QUEUE_FLAG_STOPPED, q);
-@@ -811,12 +814,21 @@ void blk_queue_exit(struct request_queue
+@@ -810,12 +813,21 @@ void blk_queue_exit(struct request_queue
  	percpu_ref_put(&q->q_usage_counter);
  }
  
@@ -6914,7 +6914,7 @@
  }
  
  static void blk_rq_timed_out_timer(unsigned long data)
-@@ -893,6 +905,7 @@ struct request_queue *blk_alloc_queue_no
+@@ -892,6 +904,7 @@ struct request_queue *blk_alloc_queue_no
  	__set_bit(QUEUE_FLAG_BYPASS, &q->queue_flags);
  
  	init_waitqueue_head(&q->mq_freeze_wq);
@@ -6922,7 +6922,7 @@
  
  	/*
  	 * Init percpu_ref in atomic mode so that it's faster to shutdown.
-@@ -3312,7 +3325,7 @@ static void queue_unplugged(struct reque
+@@ -3311,7 +3324,7 @@ static void queue_unplugged(struct reque
  		blk_run_queue_async(q);
  	else
  		__blk_run_queue(q);
@@ -6931,7 +6931,7 @@
  }
  
  static void flush_plug_callbacks(struct blk_plug *plug, bool from_schedule)
-@@ -3360,7 +3373,6 @@ EXPORT_SYMBOL(blk_check_plugged);
+@@ -3359,7 +3372,6 @@ EXPORT_SYMBOL(blk_check_plugged);
  void blk_flush_plug_list(struct blk_plug *plug, bool from_schedule)
  {
  	struct request_queue *q;
@@ -6939,7 +6939,7 @@
  	struct request *rq;
  	LIST_HEAD(list);
  	unsigned int depth;
-@@ -3380,11 +3392,6 @@ void blk_flush_plug_list(struct blk_plug
+@@ -3379,11 +3391,6 @@ void blk_flush_plug_list(struct blk_plug
  	q = NULL;
  	depth = 0;
  
@@ -6951,7 +6951,7 @@
  	while (!list_empty(&list)) {
  		rq = list_entry_rq(list.next);
  		list_del_init(&rq->queuelist);
-@@ -3397,7 +3404,7 @@ void blk_flush_plug_list(struct blk_plug
+@@ -3396,7 +3403,7 @@ void blk_flush_plug_list(struct blk_plug
  				queue_unplugged(q, depth, from_schedule);
  			q = rq->q;
  			depth = 0;
@@ -6960,7 +6960,7 @@
  		}
  
  		/*
-@@ -3424,8 +3431,6 @@ void blk_flush_plug_list(struct blk_plug
+@@ -3423,8 +3430,6 @@ void blk_flush_plug_list(struct blk_plug
  	 */
  	if (q)
  		queue_unplugged(q, depth, from_schedule);
@@ -6969,7 +6969,7 @@
  }
  
  void blk_finish_plug(struct blk_plug *plug)
-@@ -3637,6 +3642,8 @@ int __init blk_dev_init(void)
+@@ -3636,6 +3641,8 @@ int __init blk_dev_init(void)
  	if (!kblockd_workqueue)
  		panic("Failed to create kblockd\n");
  
@@ -7091,7 +7091,7 @@
  	}
  
  	kblockd_schedule_delayed_work_on(blk_mq_hctx_next_cpu(hctx),
-@@ -2863,10 +2886,9 @@ static bool blk_mq_poll_hybrid_sleep(str
+@@ -2865,10 +2888,9 @@ static bool blk_mq_poll_hybrid_sleep(str
  	kt = nsecs;
  
  	mode = HRTIMER_MODE_REL;
@@ -7711,56 +7711,6 @@
  
  	fast_mix(fast_pool);
  	add_interrupt_bench(cycles);
-@@ -2200,6 +2201,7 @@ static rwlock_t batched_entropy_reset_lo
-  * at any point prior.
-  */
- static DEFINE_PER_CPU(struct batched_entropy, batched_entropy_u64);
-+static DEFINE_LOCAL_IRQ_LOCK(batched_entropy_u64_lock);
- u64 get_random_u64(void)
- {
- 	u64 ret;
-@@ -2220,7 +2222,7 @@ u64 get_random_u64(void)
- 	warn_unseeded_randomness(&previous);
- 
- 	use_lock = READ_ONCE(crng_init) < 2;
--	batch = &get_cpu_var(batched_entropy_u64);
-+	batch = &get_locked_var(batched_entropy_u64_lock, batched_entropy_u64);
- 	if (use_lock)
- 		read_lock_irqsave(&batched_entropy_reset_lock, flags);
- 	if (batch->position % ARRAY_SIZE(batch->entropy_u64) == 0) {
-@@ -2230,12 +2232,13 @@ u64 get_random_u64(void)
- 	ret = batch->entropy_u64[batch->position++];
- 	if (use_lock)
- 		read_unlock_irqrestore(&batched_entropy_reset_lock, flags);
--	put_cpu_var(batched_entropy_u64);
-+	put_locked_var(batched_entropy_u64_lock, batched_entropy_u64);
- 	return ret;
- }
- EXPORT_SYMBOL(get_random_u64);
- 
- static DEFINE_PER_CPU(struct batched_entropy, batched_entropy_u32);
-+static DEFINE_LOCAL_IRQ_LOCK(batched_entropy_u32_lock);
- u32 get_random_u32(void)
- {
- 	u32 ret;
-@@ -2250,7 +2253,7 @@ u32 get_random_u32(void)
- 	warn_unseeded_randomness(&previous);
- 
- 	use_lock = READ_ONCE(crng_init) < 2;
--	batch = &get_cpu_var(batched_entropy_u32);
-+	batch = &get_locked_var(batched_entropy_u32_lock, batched_entropy_u32);
- 	if (use_lock)
- 		read_lock_irqsave(&batched_entropy_reset_lock, flags);
- 	if (batch->position % ARRAY_SIZE(batch->entropy_u32) == 0) {
-@@ -2260,7 +2263,7 @@ u32 get_random_u32(void)
- 	ret = batch->entropy_u32[batch->position++];
- 	if (use_lock)
- 		read_unlock_irqrestore(&batched_entropy_reset_lock, flags);
--	put_cpu_var(batched_entropy_u32);
-+	put_locked_var(batched_entropy_u32_lock, batched_entropy_u32);
- 	return ret;
- }
- EXPORT_SYMBOL(get_random_u32);
 --- a/drivers/char/tpm/tpm_tis.c
 +++ b/drivers/char/tpm/tpm_tis.c
 @@ -52,6 +52,31 @@ static inline struct tpm_tis_tcg_phy *to
@@ -9549,7 +9499,7 @@
  };
  
  struct mvpp2_queue_vector {
-@@ -5955,46 +5954,34 @@ static void mvpp2_link_event(struct net_
+@@ -5953,46 +5952,34 @@ static void mvpp2_link_event(struct net_
  	}
  }
  
@@ -9612,7 +9562,7 @@
  	return HRTIMER_NORESTART;
  }
  
-@@ -6484,7 +6471,12 @@ out:
+@@ -6482,7 +6469,12 @@ out:
  	    txq_pcpu->count > 0) {
  		struct mvpp2_port_pcpu *port_pcpu = this_cpu_ptr(port->pcpu);
  
@@ -9626,7 +9576,7 @@
  	}
  
  	return NETDEV_TX_OK;
-@@ -6875,7 +6867,6 @@ static int mvpp2_stop(struct net_device
+@@ -6873,7 +6865,6 @@ static int mvpp2_stop(struct net_device
  
  			hrtimer_cancel(&port_pcpu->tx_done_timer);
  			port_pcpu->timer_scheduled = false;
@@ -9634,7 +9584,7 @@
  		}
  	}
  	mvpp2_cleanup_rxqs(port);
-@@ -7648,13 +7639,10 @@ static int mvpp2_port_probe(struct platf
+@@ -7646,13 +7637,10 @@ static int mvpp2_port_probe(struct platf
  			port_pcpu = per_cpu_ptr(port->pcpu, cpu);
  
  			hrtimer_init(&port_pcpu->tx_done_timer, CLOCK_MONOTONIC,
@@ -11736,7 +11686,7 @@
  #endif /* defined(_LINUX_DELAY_H) */
 --- a/include/linux/fs.h
 +++ b/include/linux/fs.h
-@@ -657,7 +657,7 @@ struct inode {
+@@ -660,7 +660,7 @@ struct inode {
  		struct block_device	*i_bdev;
  		struct cdev		*i_cdev;
  		char			*i_link;
@@ -14020,7 +13970,7 @@
  
  #else /* #ifdef CONFIG_PREEMPT_RCU */
  
-@@ -99,6 +109,8 @@ static inline int rcu_preempt_depth(void
+@@ -97,6 +107,8 @@ static inline int rcu_preempt_depth(void
  	return 0;
  }
  
@@ -14029,7 +13979,7 @@
  #endif /* #else #ifdef CONFIG_PREEMPT_RCU */
  
  /* Internal to kernel */
-@@ -255,7 +267,14 @@ extern struct lockdep_map rcu_sched_lock
+@@ -253,7 +265,14 @@ extern struct lockdep_map rcu_sched_lock
  extern struct lockdep_map rcu_callback_map;
  int debug_lockdep_rcu_enabled(void);
  int rcu_read_lock_held(void);
@@ -14044,7 +13994,7 @@
  int rcu_read_lock_sched_held(void);
  
  #else /* #ifdef CONFIG_DEBUG_LOCK_ALLOC */
-@@ -365,54 +384,6 @@ static inline void rcu_preempt_sleep_che
+@@ -363,54 +382,6 @@ static inline void rcu_preempt_sleep_che
  })
  
  /**
@@ -14099,7 +14049,7 @@
   * rcu_swap_protected() - swap an RCU and a regular pointer
   * @rcu_ptr: RCU pointer
   * @ptr: regular pointer
-@@ -707,10 +678,14 @@ static inline void rcu_read_unlock(void)
+@@ -705,10 +676,14 @@ static inline void rcu_read_unlock(void)
  static inline void rcu_read_lock_bh(void)
  {
  	local_bh_disable();
@@ -14114,7 +14064,7 @@
  }
  
  /*
-@@ -720,10 +695,14 @@ static inline void rcu_read_lock_bh(void
+@@ -718,10 +693,14 @@ static inline void rcu_read_lock_bh(void
   */
  static inline void rcu_read_unlock_bh(void)
  {
@@ -16245,7 +16195,7 @@
  	struct cgroup_subsys *ss = css->ss;
  	struct cgroup *cgrp = css->cgroup;
  
-@@ -4577,8 +4577,8 @@ static void css_release(struct percpu_re
+@@ -4579,8 +4579,8 @@ static void css_release(struct percpu_re
  	struct cgroup_subsys_state *css =
  		container_of(ref, struct cgroup_subsys_state, refcnt);
  
@@ -16256,7 +16206,7 @@
  }
  
  static void init_and_link_css(struct cgroup_subsys_state *css,
-@@ -5284,6 +5284,7 @@ static int __init cgroup_wq_init(void)
+@@ -5290,6 +5290,7 @@ static int __init cgroup_wq_init(void)
  	 */
  	cgroup_destroy_wq = alloc_workqueue("cgroup_destroy", 0, 1);
  	BUG_ON(!cgroup_destroy_wq);
@@ -20042,7 +19992,7 @@
  	return 0;
 --- a/kernel/power/hibernate.c
 +++ b/kernel/power/hibernate.c
-@@ -287,6 +287,8 @@ static int create_image(int platform_mod
+@@ -292,6 +292,8 @@ static int create_image(int platform_mod
  
  	local_irq_disable();
  
@@ -20051,7 +20001,7 @@
  	error = syscore_suspend();
  	if (error) {
  		pr_err("Some system devices failed to power down, aborting hibernation\n");
-@@ -317,6 +319,7 @@ static int create_image(int platform_mod
+@@ -322,6 +324,7 @@ static int create_image(int platform_mod
  	syscore_resume();
  
   Enable_irqs:
@@ -20059,7 +20009,7 @@
  	local_irq_enable();
  
   Enable_cpus:
-@@ -445,6 +448,7 @@ static int resume_target_kernel(bool pla
+@@ -454,6 +457,7 @@ static int resume_target_kernel(bool pla
  		goto Enable_cpus;
  
  	local_irq_disable();
@@ -20067,7 +20017,7 @@
  
  	error = syscore_suspend();
  	if (error)
-@@ -478,6 +482,7 @@ static int resume_target_kernel(bool pla
+@@ -487,6 +491,7 @@ static int resume_target_kernel(bool pla
  	syscore_resume();
  
   Enable_irqs:
@@ -20075,7 +20025,7 @@
  	local_irq_enable();
  
   Enable_cpus:
-@@ -563,6 +568,7 @@ int hibernation_platform_enter(void)
+@@ -572,6 +577,7 @@ int hibernation_platform_enter(void)
  		goto Enable_cpus;
  
  	local_irq_disable();
@@ -20083,7 +20033,7 @@
  	syscore_suspend();
  	if (pm_wakeup_pending()) {
  		error = -EAGAIN;
-@@ -575,6 +581,7 @@ int hibernation_platform_enter(void)
+@@ -584,6 +590,7 @@ int hibernation_platform_enter(void)
  
   Power_up:
  	syscore_resume();
@@ -20091,7 +20041,7 @@
  	local_irq_enable();
  
   Enable_cpus:
-@@ -672,6 +679,10 @@ static int load_image_and_restore(void)
+@@ -681,6 +688,10 @@ static int load_image_and_restore(void)
  	return error;
  }
  
@@ -20102,7 +20052,7 @@
  /**
   * hibernate - Carry out system hibernation, including saving the image.
   */
-@@ -685,6 +696,8 @@ int hibernate(void)
+@@ -694,6 +705,8 @@ int hibernate(void)
  		return -EPERM;
  	}
  
@@ -20111,7 +20061,7 @@
  	lock_system_sleep();
  	/* The snapshot device should not be opened while we're running */
  	if (!atomic_add_unless(&snapshot_device_available, -1, 0)) {
-@@ -763,6 +776,7 @@ int hibernate(void)
+@@ -772,6 +785,7 @@ int hibernate(void)
  	atomic_inc(&snapshot_device_available);
   Unlock:
  	unlock_system_sleep();
@@ -22565,7 +22515,7 @@
  
  	return (nested == preempt_offset);
  }
-@@ -6763,3 +6909,196 @@ const u32 sched_prio_to_wmult[40] = {
+@@ -6770,3 +6916,196 @@ const u32 sched_prio_to_wmult[40] = {
   /*  10 */  39045157,  49367440,  61356676,  76695844,  95443717,
   /*  15 */ 119304647, 148102320, 186737708, 238609294, 286331153,
  };
@@ -36050,7 +36000,7 @@
  	return NULL;
  }
  
-@@ -6775,8 +6835,9 @@ void __init free_area_init(unsigned long
+@@ -6777,8 +6837,9 @@ void __init free_area_init(unsigned long
  
  static int page_alloc_cpu_dead(unsigned int cpu)
  {
@@ -36061,7 +36011,7 @@
  	drain_pages(cpu);
  
  	/*
-@@ -7680,7 +7741,7 @@ void zone_pcp_reset(struct zone *zone)
+@@ -7682,7 +7743,7 @@ void zone_pcp_reset(struct zone *zone)
  	struct per_cpu_pageset *pset;
  
  	/* avoid races with drain_pages()  */
@@ -36070,7 +36020,7 @@
  	if (zone->pageset != &boot_pageset) {
  		for_each_online_cpu(cpu) {
  			pset = per_cpu_ptr(zone->pageset, cpu);
-@@ -7689,7 +7750,7 @@ void zone_pcp_reset(struct zone *zone)
+@@ -7691,7 +7752,7 @@ void zone_pcp_reset(struct zone *zone)
  		free_percpu(zone->pageset);
  		zone->pageset = &boot_pageset;
  	}
@@ -39162,7 +39112,7 @@
  	return __this_cpu_read(kvm_arm_running_vcpu);
  }
  
-@@ -652,7 +650,7 @@ int kvm_arch_vcpu_ioctl_run(struct kvm_v
+@@ -655,7 +653,7 @@ int kvm_arch_vcpu_ioctl_run(struct kvm_v
  		 * involves poking the GIC, which must be done in a
  		 * non-preemptible context.
  		 */
@@ -39171,7 +39121,7 @@
  
  		kvm_pmu_flush_hwstate(vcpu);
  
-@@ -689,7 +687,7 @@ int kvm_arch_vcpu_ioctl_run(struct kvm_v
+@@ -692,7 +690,7 @@ int kvm_arch_vcpu_ioctl_run(struct kvm_v
  			kvm_pmu_sync_hwstate(vcpu);
  			kvm_timer_sync_hwstate(vcpu);
  			kvm_vgic_sync_hwstate(vcpu);
@@ -39180,7 +39130,7 @@
  			continue;
  		}
  
-@@ -744,7 +742,7 @@ int kvm_arch_vcpu_ioctl_run(struct kvm_v
+@@ -747,7 +745,7 @@ int kvm_arch_vcpu_ioctl_run(struct kvm_v
  
  		kvm_vgic_sync_hwstate(vcpu);
  
