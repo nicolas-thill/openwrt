@@ -2945,7 +2945,7 @@
  	rq->cpu = -1;
  	rq->q = q;
  	rq->__sector = (sector_t) -1;
-@@ -965,12 +968,21 @@ void blk_queue_exit(struct request_queue
+@@ -964,12 +967,21 @@ void blk_queue_exit(struct request_queue
  	percpu_ref_put(&q->q_usage_counter);
  }
  
@@ -2968,7 +2968,7 @@
  }
  
  static void blk_rq_timed_out_timer(struct timer_list *t)
-@@ -1067,6 +1079,7 @@ struct request_queue *blk_alloc_queue_no
+@@ -1066,6 +1078,7 @@ struct request_queue *blk_alloc_queue_no
  	queue_flag_set_unlocked(QUEUE_FLAG_BYPASS, q);
  
  	init_waitqueue_head(&q->mq_freeze_wq);
@@ -2976,7 +2976,7 @@
  
  	/*
  	 * Init percpu_ref in atomic mode so that it's faster to shutdown.
-@@ -3957,6 +3970,8 @@ int __init blk_dev_init(void)
+@@ -3956,6 +3969,8 @@ int __init blk_dev_init(void)
  	if (!kblockd_workqueue)
  		panic("Failed to create kblockd\n");
  
@@ -3098,7 +3098,7 @@
  	}
  
  	kblockd_mod_delayed_work_on(blk_mq_hctx_next_cpu(hctx), &hctx->run_work,
-@@ -3126,10 +3149,9 @@ static bool blk_mq_poll_hybrid_sleep(str
+@@ -3128,10 +3151,9 @@ static bool blk_mq_poll_hybrid_sleep(str
  	kt = nsecs;
  
  	mode = HRTIMER_MODE_REL;
@@ -19528,7 +19528,7 @@
  	/* Get the next period (per-CPU) */
 --- a/kernel/time/timekeeping.c
 +++ b/kernel/time/timekeeping.c
-@@ -2417,8 +2417,10 @@ EXPORT_SYMBOL(hardpps);
+@@ -2418,8 +2418,10 @@ EXPORT_SYMBOL(hardpps);
   */
  void xtime_update(unsigned long ticks)
  {
@@ -21702,7 +21702,7 @@
  	return NULL;
  }
  
-@@ -7120,8 +7205,9 @@ void __init free_area_init(unsigned long
+@@ -7122,8 +7207,9 @@ void __init free_area_init(unsigned long
  
  static int page_alloc_cpu_dead(unsigned int cpu)
  {
@@ -21713,7 +21713,7 @@
  	drain_pages(cpu);
  
  	/*
-@@ -8032,7 +8118,7 @@ void zone_pcp_reset(struct zone *zone)
+@@ -8034,7 +8120,7 @@ void zone_pcp_reset(struct zone *zone)
  	struct per_cpu_pageset *pset;
  
  	/* avoid races with drain_pages()  */
@@ -21722,7 +21722,7 @@
  	if (zone->pageset != &boot_pageset) {
  		for_each_online_cpu(cpu) {
  			pset = per_cpu_ptr(zone->pageset, cpu);
-@@ -8041,7 +8127,7 @@ void zone_pcp_reset(struct zone *zone)
+@@ -8043,7 +8129,7 @@ void zone_pcp_reset(struct zone *zone)
  		free_percpu(zone->pageset);
  		zone->pageset = &boot_pageset;
  	}
@@ -22080,7 +22080,7 @@
  	}
  	num_objs = total_slabs * cachep->num;
  	active_slabs = total_slabs - free_slabs;
-@@ -4334,13 +4334,13 @@ static int leaks_show(struct seq_file *m
+@@ -4338,13 +4338,13 @@ static int leaks_show(struct seq_file *m
  		for_each_kmem_cache_node(cachep, node, n) {
  
  			check_irq_on();
