@@ -1,9 +1,9 @@
-4.14.115-rt59
+4.14.126-rt62
 
 --- /dev/null
 +++ b/source/localversion-rt
 @@ -0,0 +1 @@
-+-rt59
++-rt62
 --- a/Documentation/trace/events.txt
 +++ b/Documentation/trace/events.txt
 @@ -517,1550 +517,4 @@ The following commands are supported:
@@ -35271,7 +35271,7 @@
 --- /dev/null
 +++ b/localversion-rt
 @@ -0,0 +1 @@
-+-rt59
++-rt62
 --- a/mm/Kconfig
 +++ b/mm/Kconfig
 @@ -385,7 +385,7 @@ config NOMMU_INITIAL_TRIM_EXCESS
