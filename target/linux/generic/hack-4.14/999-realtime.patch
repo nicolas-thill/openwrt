@@ -38109,7 +38109,7 @@
  {
 --- a/net/core/sock.c
 +++ b/net/core/sock.c
-@@ -2776,12 +2776,11 @@ void lock_sock_nested(struct sock *sk, i
+@@ -2773,12 +2773,11 @@ void lock_sock_nested(struct sock *sk, i
  	if (sk->sk_lock.owned)
  		__lock_sock(sk);
  	sk->sk_lock.owned = 1;
