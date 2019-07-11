@@ -167,12 +167,16 @@ define Device/tplink_cpe610-v1
   DEVICE_VARIANT := v1
   TPLINK_BOARD_ID := CPE610V1
   LOADER_TYPE := elf
-  KERNEL := kernel-bin | append-dtb | lzma | loader-kernel
+  LOADER_FLASH_OFFS := 0x43000
+  COMPILE := loader-$(1).elf
+  COMPILE/loader-$(1).elf := loader-okli-compile
+  KERNEL := kernel-bin | append-dtb | lzma | uImage lzma -M 0x4f4b4c49 | loader-okli $(1) 12288
 endef
 TARGET_DEVICES += tplink_cpe610-v1
 
 define Device/tplink_archer-d50-v1
   ATH_SOC := qca9531
+  DEVICE_VENDOR := TP-Link
   DEVICE_MODEL := Archer D50
   DEVICE_VARIANT := v1
   DEVICE_PACKAGES := kmod-usb-core kmod-usb2 kmod-usb-ledtrig-usbport kmod-ath10k-ct ath10k-firmware-qca988x-ct
