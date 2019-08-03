@@ -1220,7 +1220,7 @@
  			local_irq_enable();
 --- a/arch/mips/Kconfig
 +++ b/arch/mips/Kconfig
-@@ -2531,7 +2531,7 @@ config MIPS_ASID_BITS_VARIABLE
+@@ -2532,7 +2532,7 @@ config MIPS_ASID_BITS_VARIABLE
  #
  config HIGHMEM
  	bool "High Memory Support"
@@ -5605,7 +5605,7 @@
  #include <linux/uaccess.h>
  #include <linux/pm_runtime.h>
  #include <linux/timer.h>
-@@ -3143,9 +3144,9 @@ void serial8250_console_write(struct uar
+@@ -3142,9 +3143,9 @@ void serial8250_console_write(struct uar
  
  	serial8250_rpm_get(up);
  
@@ -6750,7 +6750,7 @@
   */
 --- a/include/asm-generic/bug.h
 +++ b/include/asm-generic/bug.h
-@@ -215,6 +215,20 @@ void __warn(const char *file, int line,
+@@ -216,6 +216,20 @@ void __warn(const char *file, int line,
  # define WARN_ON_SMP(x)			({0;})
  #endif
  
@@ -17071,7 +17071,7 @@
  	 * oops_in_progress is set to 1..
 --- a/kernel/ptrace.c
 +++ b/kernel/ptrace.c
-@@ -172,7 +172,14 @@ static bool ptrace_freeze_traced(struct
+@@ -170,7 +170,14 @@ static bool ptrace_freeze_traced(struct
  
  	spin_lock_irq(&task->sighand->siglock);
  	if (task_is_traced(task) && !__fatal_signal_pending(task)) {
@@ -25060,7 +25060,7 @@
  	return NULL;
  }
  
-@@ -6562,7 +6624,9 @@ static int page_alloc_cpu_notify(struct
+@@ -6561,7 +6623,9 @@ static int page_alloc_cpu_notify(struct
  	int cpu = (unsigned long)hcpu;
  
  	if (action == CPU_DEAD || action == CPU_DEAD_FROZEN) {
@@ -25070,7 +25070,7 @@
  		drain_pages(cpu);
  
  		/*
-@@ -6588,6 +6652,7 @@ static int page_alloc_cpu_notify(struct
+@@ -6587,6 +6651,7 @@ static int page_alloc_cpu_notify(struct
  void __init page_alloc_init(void)
  {
  	hotcpu_notifier(page_alloc_cpu_notify, 0);
@@ -25078,7 +25078,7 @@
  }
  
  /*
-@@ -7423,7 +7488,7 @@ void zone_pcp_reset(struct zone *zone)
+@@ -7422,7 +7487,7 @@ void zone_pcp_reset(struct zone *zone)
  	struct per_cpu_pageset *pset;
  
  	/* avoid races with drain_pages()  */
@@ -25087,7 +25087,7 @@
  	if (zone->pageset != &boot_pageset) {
  		for_each_online_cpu(cpu) {
  			pset = per_cpu_ptr(zone->pageset, cpu);
-@@ -7432,7 +7497,7 @@ void zone_pcp_reset(struct zone *zone)
+@@ -7431,7 +7496,7 @@ void zone_pcp_reset(struct zone *zone)
  		free_percpu(zone->pageset);
  		zone->pageset = &boot_pageset;
  	}
@@ -26584,7 +26584,7 @@
  
  void __napi_complete(struct napi_struct *n)
  {
-@@ -5311,13 +5337,21 @@ static __latent_entropy void net_rx_acti
+@@ -5314,13 +5340,21 @@ static __latent_entropy void net_rx_acti
  	struct softnet_data *sd = this_cpu_ptr(&softnet_data);
  	unsigned long time_limit = jiffies + 2;
  	int budget = netdev_budget;
@@ -26606,7 +26606,7 @@
  	for (;;) {
  		struct napi_struct *n;
  
-@@ -5348,7 +5382,7 @@ static __latent_entropy void net_rx_acti
+@@ -5351,7 +5385,7 @@ static __latent_entropy void net_rx_acti
  	list_splice_tail(&repoll, &list);
  	list_splice(&list, &sd->poll_list);
  	if (!list_empty(&sd->poll_list))
@@ -26615,7 +26615,7 @@
  
  	net_rps_action_and_irq_enable(sd);
  }
-@@ -7224,7 +7258,7 @@ static void netdev_init_one_queue(struct
+@@ -7227,7 +7261,7 @@ static void netdev_init_one_queue(struct
  	/* Initialize queue lock */
  	spin_lock_init(&queue->_xmit_lock);
  	netdev_set_xmit_lockdep_class(&queue->_xmit_lock, dev->type);
@@ -26624,7 +26624,7 @@
  	netdev_queue_numa_node_write(queue, NUMA_NO_NODE);
  	queue->dev = dev;
  #ifdef CONFIG_BQL
-@@ -8157,16 +8191,20 @@ static int dev_cpu_callback(struct notif
+@@ -8160,16 +8194,20 @@ static int dev_cpu_callback(struct notif
  
  	raise_softirq_irqoff(NET_TX_SOFTIRQ);
  	local_irq_enable();
@@ -26646,7 +26646,7 @@
  
  	return NOTIFY_OK;
  }
-@@ -8471,8 +8509,9 @@ static int __init net_dev_init(void)
+@@ -8474,8 +8512,9 @@ static int __init net_dev_init(void)
  
  		INIT_WORK(flush, flush_backlog);
  
@@ -26769,7 +26769,7 @@
 -	local_irq_save(flags);
 +	local_lock_irqsave(netdev_alloc_lock, flags);
  	nc = this_cpu_ptr(&netdev_alloc_cache);
- 	data = page_frag_alloc(nc, fragsz, gfp_mask);
+ 	data = __alloc_page_frag(nc, fragsz, gfp_mask);
 -	local_irq_restore(flags);
 +	local_unlock_irqrestore(netdev_alloc_lock, flags);
  	return data;
@@ -26783,9 +26783,9 @@
 +	struct napi_alloc_cache *nc;
 +	void *data;
  
--	return page_frag_alloc(&nc->page, fragsz, gfp_mask);
+-	return __alloc_page_frag(&nc->page, fragsz, gfp_mask);
 +	nc = &get_locked_var(napi_alloc_cache_lock, napi_alloc_cache);
-+	data = page_frag_alloc(&nc->page, fragsz, gfp_mask);
++	data = __alloc_page_frag(&nc->page, fragsz, gfp_mask);
 +	put_locked_var(napi_alloc_cache_lock, napi_alloc_cache);
 +	return data;
  }
@@ -26799,7 +26799,7 @@
 +	local_lock_irqsave(netdev_alloc_lock, flags);
  
  	nc = this_cpu_ptr(&netdev_alloc_cache);
- 	data = page_frag_alloc(nc, len, gfp_mask);
+ 	data = __alloc_page_frag(nc, len, gfp_mask);
  	pfmemalloc = nc->pfmemalloc;
  
 -	local_irq_restore(flags);
@@ -26824,7 +26824,7 @@
  		gfp_mask |= __GFP_MEMALLOC;
  
 +	nc = &get_locked_var(napi_alloc_cache_lock, napi_alloc_cache);
- 	data = page_frag_alloc(&nc->page, len, gfp_mask);
+ 	data = __alloc_page_frag(&nc->page, len, gfp_mask);
 +	pfmemalloc = nc->page.pfmemalloc;
 +	put_locked_var(napi_alloc_cache_lock, napi_alloc_cache);
  	if (unlikely(!data))
@@ -27074,7 +27074,7 @@
  
 --- a/net/mac80211/rx.c
 +++ b/net/mac80211/rx.c
-@@ -4235,7 +4235,7 @@ void ieee80211_rx_napi(struct ieee80211_
+@@ -4237,7 +4237,7 @@ void ieee80211_rx_napi(struct ieee80211_
  	struct ieee80211_supported_band *sband;
  	struct ieee80211_rx_status *status = IEEE80211_SKB_RXCB(skb);
  
