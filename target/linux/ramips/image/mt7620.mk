@@ -372,6 +372,19 @@ define Device/elecom_wrh-300cr
 endef
 TARGET_DEVICES += elecom_wrh-300cr
 
+define Device/engenius_esr600
+  MTK_SOC := mt7620a
+  BLOCKSIZE := 64k
+  IMAGE_SIZE := 15616k
+  IMAGES += factory.dlf
+  IMAGE/factory.dlf := $$(sysupgrade_bin) | check-size $$$$(IMAGE_SIZE) | \
+       senao-header -r 0x101 -p 0x57 -t 2
+  DEVICE_VENDOR := EnGenius
+  DEVICE_MODEL := ESR600
+  DEVICE_PACKAGES += kmod-rt2800-pci kmod-usb-core kmod-usb-storage kmod-usb-ohci kmod-usb-ehci
+endef
+TARGET_DEVICES += engenius_esr600
+
 define Device/fon_fon2601
   MTK_SOC := mt7620a
   IMAGE_SIZE := 15936k
@@ -497,7 +510,8 @@ define Device/kimax_u25awf-h1
   DEVICE_VENDOR := Kimax
   DEVICE_MODEL := U25AWF
   DEVICE_VARIANT := H1
-  DEVICE_PACKAGES := kmod-usb2 kmod-usb-ohci
+  DEVICE_PACKAGES := kmod-usb2 kmod-usb-ohci kmod-usb-storage kmod-scsi-core \
+		     kmod-fs-ext4 kmod-fs-vfat block-mount
   SUPPORTED_DEVICES += u25awf-h1
 endef
 TARGET_DEVICES += kimax_u25awf-h1
@@ -507,7 +521,8 @@ define Device/kimax_u35wf
   IMAGE_SIZE := 16064k
   DEVICE_VENDOR := Kimax
   DEVICE_MODEL := U35WF
-  DEVICE_PACKAGES := kmod-usb2 kmod-usb-ohci
+  DEVICE_PACKAGES := kmod-usb2 kmod-usb-ohci kmod-usb-storage kmod-scsi-core \
+		     kmod-fs-ext4 kmod-fs-vfat block-mount
 endef
 TARGET_DEVICES += kimax_u35wf
 
