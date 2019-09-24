@@ -1,9 +1,9 @@
-4.14.134-rt63
+4.14.137-rt64
 
 --- /dev/null
 +++ b/source/localversion-rt
 @@ -0,0 +1 @@
-+-rt63
++-rt64
 --- a/Documentation/trace/events.txt
 +++ b/Documentation/trace/events.txt
 @@ -517,1550 +517,4 @@ The following commands are supported:
@@ -4761,7 +4761,7 @@
  } arch_spinlock_t;
 --- a/arch/mips/Kconfig
 +++ b/arch/mips/Kconfig
-@@ -2534,7 +2534,7 @@ config MIPS_ASID_BITS_VARIABLE
+@@ -2531,7 +2531,7 @@ config MIPS_ASID_BITS_VARIABLE
  #
  config HIGHMEM
  	bool "High Memory Support"
@@ -6109,7 +6109,7 @@
  	call	preempt_schedule_irq
 --- a/arch/x86/entry/entry_64.S
 +++ b/arch/x86/entry/entry_64.S
-@@ -635,7 +635,23 @@ retint_kernel:
+@@ -638,7 +638,23 @@ retint_kernel:
  	btl	$9, EFLAGS(%rsp)		/* were interrupts off? */
  	jnc	1f
  0:	cmpl	$0, PER_CPU_VAR(__preempt_count)
@@ -6133,7 +6133,7 @@
  	call	preempt_schedule_irq
  	jmp	0b
  1:
-@@ -1004,6 +1020,7 @@ bad_gs:
+@@ -1007,6 +1023,7 @@ bad_gs:
  	jmp	2b
  	.previous
  
@@ -6141,7 +6141,7 @@
  /* Call softirq on interrupt stack. Interrupts are off. */
  ENTRY(do_softirq_own_stack)
  	pushq	%rbp
-@@ -1014,6 +1031,7 @@ ENTRY(do_softirq_own_stack)
+@@ -1017,6 +1034,7 @@ ENTRY(do_softirq_own_stack)
  	leaveq
  	ret
  ENDPROC(do_softirq_own_stack)
@@ -6716,7 +6716,7 @@
  	 * This must be done before restoring TLS segments so
 --- a/arch/x86/kvm/lapic.c
 +++ b/arch/x86/kvm/lapic.c
-@@ -2138,7 +2138,7 @@ int kvm_create_lapic(struct kvm_vcpu *vc
+@@ -2143,7 +2143,7 @@ int kvm_create_lapic(struct kvm_vcpu *vc
  	apic->vcpu = vcpu;
  
  	hrtimer_init(&apic->lapic_timer.timer, CLOCK_MONOTONIC,
@@ -6727,7 +6727,7 @@
  	/*
 --- a/arch/x86/kvm/x86.c
 +++ b/arch/x86/kvm/x86.c
-@@ -6316,6 +6316,13 @@ int kvm_arch_init(void *opaque)
+@@ -6324,6 +6324,13 @@ int kvm_arch_init(void *opaque)
  		goto out;
  	}
  
@@ -9125,7 +9125,7 @@
  	u16 alias;			  /* Alias Device ID */
 --- a/drivers/iommu/iova.c
 +++ b/drivers/iommu/iova.c
-@@ -570,7 +570,7 @@ void queue_iova(struct iova_domain *iova
+@@ -580,7 +580,7 @@ void queue_iova(struct iova_domain *iova
  		unsigned long pfn, unsigned long pages,
  		unsigned long data)
  {
@@ -9134,7 +9134,7 @@
  	unsigned long flags;
  	unsigned idx;
  
-@@ -600,8 +600,6 @@ void queue_iova(struct iova_domain *iova
+@@ -610,8 +610,6 @@ void queue_iova(struct iova_domain *iova
  	if (atomic_cmpxchg(&iovad->fq_timer_on, 0, 1) == 0)
  		mod_timer(&iovad->fq_timer,
  			  jiffies + msecs_to_jiffies(IOVA_FQ_TIMEOUT));
@@ -9584,7 +9584,7 @@
  		}
  	}
  	mvpp2_cleanup_rxqs(port);
-@@ -7646,13 +7637,10 @@ static int mvpp2_port_probe(struct platf
+@@ -7631,13 +7622,10 @@ static int mvpp2_port_probe(struct platf
  			port_pcpu = per_cpu_ptr(port->pcpu, cpu);
  
  			hrtimer_init(&port_pcpu->tx_done_timer, CLOCK_MONOTONIC,
@@ -10116,7 +10116,7 @@
  #include <linux/uaccess.h>
  #include <linux/pm_runtime.h>
  #include <linux/ktime.h>
-@@ -3223,9 +3224,9 @@ void serial8250_console_write(struct uar
+@@ -3224,9 +3225,9 @@ void serial8250_console_write(struct uar
  
  	serial8250_rpm_get(up);
  
@@ -10238,7 +10238,7 @@
  	atomic_dec(&urb->use_count);
 --- a/drivers/usb/gadget/function/f_fs.c
 +++ b/drivers/usb/gadget/function/f_fs.c
-@@ -1614,7 +1614,7 @@ static void ffs_data_put(struct ffs_data
+@@ -1616,7 +1616,7 @@ static void ffs_data_put(struct ffs_data
  		pr_info("%s(): freeing\n", __func__);
  		ffs_data_clear(ffs);
  		BUG_ON(waitqueue_active(&ffs->ev.waitq) ||
@@ -10989,7 +10989,7 @@
  	struct dentry *dentry;
  	struct dentry *alias;
  	struct inode *dir = d_inode(parent);
-@@ -1443,7 +1443,7 @@ int nfs_atomic_open(struct inode *dir, s
+@@ -1479,7 +1479,7 @@ int nfs_atomic_open(struct inode *dir, s
  		    struct file *file, unsigned open_flags,
  		    umode_t mode, int *opened)
  {
@@ -10998,7 +10998,7 @@
  	struct nfs_open_context *ctx;
  	struct dentry *res;
  	struct iattr attr = { .ia_valid = ATTR_OPEN };
-@@ -1763,7 +1763,11 @@ int nfs_rmdir(struct inode *dir, struct
+@@ -1792,7 +1792,11 @@ int nfs_rmdir(struct inode *dir, struct
  
  	trace_nfs_rmdir_enter(dir, dentry);
  	if (d_really_is_positive(dentry)) {
@@ -11010,7 +11010,7 @@
  		error = NFS_PROTO(dir)->rmdir(dir, &dentry->d_name);
  		/* Ensure the VFS deletes this inode */
  		switch (error) {
-@@ -1773,7 +1777,11 @@ int nfs_rmdir(struct inode *dir, struct
+@@ -1802,7 +1806,11 @@ int nfs_rmdir(struct inode *dir, struct
  		case -ENOENT:
  			nfs_dentry_handle_enoent(dentry);
  		}
@@ -11024,7 +11024,7 @@
  	trace_nfs_rmdir_exit(dir, dentry, error);
 --- a/fs/nfs/inode.c
 +++ b/fs/nfs/inode.c
-@@ -2014,7 +2014,11 @@ static void init_once(void *foo)
+@@ -2015,7 +2015,11 @@ static void init_once(void *foo)
  	atomic_long_set(&nfsi->nrequests, 0);
  	atomic_long_set(&nfsi->commit_info.ncommit, 0);
  	atomic_set(&nfsi->commit_info.rpcs_out, 0);
@@ -11049,7 +11049,7 @@
  
 --- a/fs/nfs/nfs4proc.c
 +++ b/fs/nfs/nfs4proc.c
-@@ -2704,7 +2704,7 @@ static int _nfs4_open_and_get_state(stru
+@@ -2715,7 +2715,7 @@ static int _nfs4_open_and_get_state(stru
  	unsigned int seq;
  	int ret;
  
@@ -11058,7 +11058,7 @@
  
  	ret = _nfs4_proc_open(opendata);
  	if (ret != 0)
-@@ -2742,7 +2742,7 @@ static int _nfs4_open_and_get_state(stru
+@@ -2753,7 +2753,7 @@ static int _nfs4_open_and_get_state(stru
  
  	if (d_inode(dentry) == state->inode) {
  		nfs_inode_attach_open_context(ctx);
@@ -11078,7 +11078,7 @@
  	mutex_init(&sp->so_delegreturn_mutex);
  	return sp;
  }
-@@ -1525,8 +1525,12 @@ static int nfs4_reclaim_open_state(struc
+@@ -1540,8 +1540,12 @@ static int nfs4_reclaim_open_state(struc
  	 * recovering after a network partition or a reboot from a
  	 * server that doesn't support a grace period.
  	 */
@@ -11092,7 +11092,7 @@
  restart:
  	list_for_each_entry(state, &sp->so_states, open_states) {
  		if (!test_and_clear_bit(ops->state_flag_bit, &state->flags))
-@@ -1595,14 +1599,20 @@ restart:
+@@ -1610,14 +1614,20 @@ restart:
  		spin_lock(&sp->so_lock);
  		goto restart;
  	}
@@ -11290,7 +11290,7 @@
  			goto end_instantiate;
 --- a/fs/proc/proc_sysctl.c
 +++ b/fs/proc/proc_sysctl.c
-@@ -678,7 +678,7 @@ static bool proc_sys_fill_cache(struct f
+@@ -682,7 +682,7 @@ static bool proc_sys_fill_cache(struct f
  
  	child = d_lookup(dir, &qname);
  	if (!child) {
@@ -16182,7 +16182,7 @@
  config PREEMPT_COUNT
 --- a/kernel/cgroup/cgroup.c
 +++ b/kernel/cgroup/cgroup.c
-@@ -4523,10 +4523,10 @@ static void css_free_rcu_fn(struct rcu_h
+@@ -4561,10 +4561,10 @@ static void css_free_rcu_fn(struct rcu_h
  	queue_work(cgroup_destroy_wq, &css->destroy_work);
  }
  
@@ -16195,7 +16195,7 @@
  	struct cgroup_subsys *ss = css->ss;
  	struct cgroup *cgrp = css->cgroup;
  
-@@ -4579,8 +4579,8 @@ static void css_release(struct percpu_re
+@@ -4617,8 +4617,8 @@ static void css_release(struct percpu_re
  	struct cgroup_subsys_state *css =
  		container_of(ref, struct cgroup_subsys_state, refcnt);
  
@@ -16206,7 +16206,7 @@
  }
  
  static void init_and_link_css(struct cgroup_subsys_state *css,
-@@ -5290,6 +5290,7 @@ static int __init cgroup_wq_init(void)
+@@ -5328,6 +5328,7 @@ static int __init cgroup_wq_init(void)
  	 */
  	cgroup_destroy_wq = alloc_workqueue("cgroup_destroy", 0, 1);
  	BUG_ON(!cgroup_destroy_wq);
@@ -16647,7 +16647,7 @@
 +	put_task_stack(tsk);
 +
  	cgroup_free(tsk);
- 	task_numa_free(tsk);
+ 	task_numa_free(tsk, true);
  	security_task_free(tsk);
 @@ -424,7 +436,18 @@ void __put_task_struct(struct task_struc
  	if (!profile_handoff_task(tsk))
@@ -22817,7 +22817,7 @@
  			continue;
  
  		env->dst_cpu = cpu;
-@@ -3845,7 +3845,7 @@ check_preempt_tick(struct cfs_rq *cfs_rq
+@@ -3861,7 +3861,7 @@ check_preempt_tick(struct cfs_rq *cfs_rq
  	ideal_runtime = sched_slice(cfs_rq, curr);
  	delta_exec = curr->sum_exec_runtime - curr->prev_sum_exec_runtime;
  	if (delta_exec > ideal_runtime) {
@@ -22826,7 +22826,7 @@
  		/*
  		 * The current task ran long enough, ensure it doesn't get
  		 * re-elected due to buddy favours.
-@@ -3869,7 +3869,7 @@ check_preempt_tick(struct cfs_rq *cfs_rq
+@@ -3885,7 +3885,7 @@ check_preempt_tick(struct cfs_rq *cfs_rq
  		return;
  
  	if (delta > ideal_runtime)
@@ -22835,7 +22835,7 @@
  }
  
  static void
-@@ -4011,7 +4011,7 @@ entity_tick(struct cfs_rq *cfs_rq, struc
+@@ -4027,7 +4027,7 @@ entity_tick(struct cfs_rq *cfs_rq, struc
  	 * validating it and just reschedule.
  	 */
  	if (queued) {
@@ -22844,7 +22844,7 @@
  		return;
  	}
  	/*
-@@ -4195,7 +4195,7 @@ static void __account_cfs_rq_runtime(str
+@@ -4213,7 +4213,7 @@ static void __account_cfs_rq_runtime(str
  	 * hierarchy can be throttled
  	 */
  	if (!assign_cfs_rq_runtime(cfs_rq) && likely(cfs_rq->curr))
@@ -22853,7 +22853,7 @@
  }
  
  static __always_inline
-@@ -4382,7 +4382,7 @@ static u64 distribute_cfs_runtime(struct
+@@ -4400,7 +4400,7 @@ static u64 distribute_cfs_runtime(struct
  		struct rq *rq = rq_of(cfs_rq);
  		struct rq_flags rf;
  
@@ -22862,7 +22862,7 @@
  		if (!cfs_rq_throttled(cfs_rq))
  			goto next;
  
-@@ -4399,7 +4399,7 @@ static u64 distribute_cfs_runtime(struct
+@@ -4420,7 +4420,7 @@ static u64 distribute_cfs_runtime(struct
  			unthrottle_cfs_rq(cfs_rq);
  
  next:
@@ -22871,7 +22871,7 @@
  
  		if (!remaining)
  			break;
-@@ -4415,7 +4415,7 @@ next:
+@@ -4436,7 +4436,7 @@ next:
   * period the timer is deactivated until scheduling resumes; cfs_b->idle is
   * used to track this state.
   */
@@ -22880,7 +22880,7 @@
  {
  	u64 runtime, runtime_expires;
  	int throttled;
-@@ -4457,11 +4457,11 @@ static int do_sched_cfs_period_timer(str
+@@ -4478,11 +4478,11 @@ static int do_sched_cfs_period_timer(str
  	while (throttled && cfs_b->runtime > 0 && !cfs_b->distribute_running) {
  		runtime = cfs_b->runtime;
  		cfs_b->distribute_running = 1;
@@ -22894,7 +22894,7 @@
  
  		cfs_b->distribute_running = 0;
  		throttled = !list_empty(&cfs_b->throttled_cfs_rq);
-@@ -4570,17 +4570,18 @@ static __always_inline void return_cfs_r
+@@ -4591,17 +4591,18 @@ static __always_inline void return_cfs_r
  static void do_sched_cfs_slack_timer(struct cfs_bandwidth *cfs_b)
  {
  	u64 runtime = 0, slice = sched_cfs_bandwidth_slice();
@@ -22916,7 +22916,7 @@
  		return;
  	}
  
-@@ -4591,18 +4592,18 @@ static void do_sched_cfs_slack_timer(str
+@@ -4612,18 +4613,18 @@ static void do_sched_cfs_slack_timer(str
  	if (runtime)
  		cfs_b->distribute_running = 1;
  
@@ -22938,7 +22938,7 @@
  }
  
  /*
-@@ -4682,11 +4683,12 @@ static enum hrtimer_restart sched_cfs_pe
+@@ -4703,11 +4704,12 @@ static enum hrtimer_restart sched_cfs_pe
  {
  	struct cfs_bandwidth *cfs_b =
  		container_of(timer, struct cfs_bandwidth, period_timer);
@@ -22952,7 +22952,7 @@
  	for (;;) {
  		overrun = hrtimer_forward_now(timer, cfs_b->period);
  		if (!overrun)
-@@ -4714,11 +4716,11 @@ static enum hrtimer_restart sched_cfs_pe
+@@ -4735,11 +4737,11 @@ static enum hrtimer_restart sched_cfs_pe
  			count = 0;
  		}
  
@@ -22966,7 +22966,7 @@
  
  	return idle ? HRTIMER_NORESTART : HRTIMER_RESTART;
  }
-@@ -4885,7 +4887,7 @@ static void hrtick_start_fair(struct rq
+@@ -4906,7 +4908,7 @@ static void hrtick_start_fair(struct rq
  
  		if (delta < 0) {
  			if (rq->curr == p)
@@ -22975,7 +22975,7 @@
  			return;
  		}
  		hrtick_start(rq, delta);
-@@ -5523,7 +5525,7 @@ find_idlest_group(struct sched_domain *s
+@@ -5544,7 +5546,7 @@ find_idlest_group(struct sched_domain *s
  
  		/* Skip over this group if it has no CPUs allowed */
  		if (!cpumask_intersects(sched_group_span(group),
@@ -22984,7 +22984,7 @@
  			continue;
  
  		local_group = cpumask_test_cpu(this_cpu,
-@@ -5643,7 +5645,7 @@ find_idlest_cpu(struct sched_group *grou
+@@ -5664,7 +5666,7 @@ find_idlest_cpu(struct sched_group *grou
  		return cpumask_first(sched_group_span(group));
  
  	/* Traverse only the allowed CPUs */
@@ -22993,7 +22993,7 @@
  		if (idle_cpu(i)) {
  			struct rq *rq = cpu_rq(i);
  			struct cpuidle_state *idle = idle_get_state(rq);
-@@ -5747,7 +5749,7 @@ static int select_idle_core(struct task_
+@@ -5768,7 +5770,7 @@ static int select_idle_core(struct task_
  	if (!test_idle_cores(target, false))
  		return -1;
  
@@ -23002,7 +23002,7 @@
  
  	for_each_cpu_wrap(core, cpus, target) {
  		bool idle = true;
-@@ -5781,7 +5783,7 @@ static int select_idle_smt(struct task_s
+@@ -5802,7 +5804,7 @@ static int select_idle_smt(struct task_s
  		return -1;
  
  	for_each_cpu(cpu, cpu_smt_mask(target)) {
@@ -23011,7 +23011,7 @@
  			continue;
  		if (idle_cpu(cpu))
  			return cpu;
-@@ -5844,7 +5846,7 @@ static int select_idle_cpu(struct task_s
+@@ -5865,7 +5867,7 @@ static int select_idle_cpu(struct task_s
  	for_each_cpu_wrap(cpu, sched_domain_span(sd), target) {
  		if (!--nr)
  			return -1;
@@ -23020,7 +23020,7 @@
  			continue;
  		if (idle_cpu(cpu))
  			break;
-@@ -5999,7 +6001,7 @@ select_task_rq_fair(struct task_struct *
+@@ -6020,7 +6022,7 @@ select_task_rq_fair(struct task_struct *
  	if (sd_flag & SD_BALANCE_WAKE) {
  		record_wakee(p);
  		want_affine = !wake_wide(p) && !wake_cap(p, cpu, prev_cpu)
@@ -23029,7 +23029,7 @@
  	}
  
  	rcu_read_lock();
-@@ -6280,7 +6282,7 @@ static void check_preempt_wakeup(struct
+@@ -6301,7 +6303,7 @@ static void check_preempt_wakeup(struct
  	return;
  
  preempt:
@@ -23038,7 +23038,7 @@
  	/*
  	 * Only set the backward buddy when the current task is still
  	 * on the rq. This can happen when a wakeup gets interleaved
-@@ -6748,14 +6750,14 @@ int can_migrate_task(struct task_struct
+@@ -6769,14 +6771,14 @@ int can_migrate_task(struct task_struct
  	/*
  	 * We do not migrate tasks that are:
  	 * 1) throttled_lb_pair, or
@@ -23055,7 +23055,7 @@
  		int cpu;
  
  		schedstat_inc(p->se.statistics.nr_failed_migrations_affine);
-@@ -6775,7 +6777,7 @@ int can_migrate_task(struct task_struct
+@@ -6796,7 +6798,7 @@ int can_migrate_task(struct task_struct
  
  		/* Prevent to re-select dst_cpu via env's cpus */
  		for_each_cpu_and(cpu, env->dst_grpmask, env->cpus) {
@@ -23064,7 +23064,7 @@
  				env->flags |= LBF_DST_PINNED;
  				env->new_dst_cpu = cpu;
  				break;
-@@ -7320,7 +7322,7 @@ check_cpu_capacity(struct rq *rq, struct
+@@ -7341,7 +7343,7 @@ check_cpu_capacity(struct rq *rq, struct
  
  /*
   * Group imbalance indicates (and tries to solve) the problem where balancing
@@ -23073,7 +23073,7 @@
   *
   * Imagine a situation of two groups of 4 cpus each and 4 tasks each with a
   * cpumask covering 1 cpu of the first group and 3 cpus of the second group.
-@@ -7896,7 +7898,7 @@ static struct sched_group *find_busiest_
+@@ -7917,7 +7919,7 @@ static struct sched_group *find_busiest_
  	/*
  	 * If the busiest group is imbalanced the below checks don't
  	 * work because they assume all things are equal, which typically
@@ -23082,7 +23082,7 @@
  	 */
  	if (busiest->group_type == group_imbalanced)
  		goto force_balance;
-@@ -8288,7 +8290,7 @@ more_balance:
+@@ -8309,7 +8311,7 @@ more_balance:
  			 * if the curr task on busiest cpu can't be
  			 * moved to this_cpu
  			 */
@@ -23091,7 +23091,7 @@
  				raw_spin_unlock_irqrestore(&busiest->lock,
  							    flags);
  				env.flags |= LBF_ALL_PINNED;
-@@ -9110,7 +9112,7 @@ static void task_fork_fair(struct task_s
+@@ -9131,7 +9133,7 @@ static void task_fork_fair(struct task_s
  		 * 'current' within the tree based on its new key value.
  		 */
  		swap(curr->vruntime, se->vruntime);
@@ -23100,7 +23100,7 @@
  	}
  
  	se->vruntime -= cfs_rq->min_vruntime;
-@@ -9134,7 +9136,7 @@ prio_changed_fair(struct rq *rq, struct
+@@ -9155,7 +9157,7 @@ prio_changed_fair(struct rq *rq, struct
  	 */
  	if (rq->curr == p) {
  		if (p->prio > oldprio)
@@ -35224,7 +35224,7 @@
  		struct ida_bitmap *bitmap = kmalloc(sizeof(*bitmap), gfp);
 --- a/lib/scatterlist.c
 +++ b/lib/scatterlist.c
-@@ -620,7 +620,7 @@ void sg_miter_stop(struct sg_mapping_ite
+@@ -621,7 +621,7 @@ void sg_miter_stop(struct sg_mapping_ite
  			flush_kernel_dcache_page(miter->page);
  
  		if (miter->__flags & SG_MITER_ATOMIC) {
@@ -35271,7 +35271,7 @@
 --- /dev/null
 +++ b/localversion-rt
 @@ -0,0 +1 @@
-+-rt63
++-rt64
 --- a/mm/Kconfig
 +++ b/mm/Kconfig
 @@ -385,7 +385,7 @@ config NOMMU_INITIAL_TRIM_EXCESS
@@ -35553,7 +35553,7 @@
  /* Whether legacy memory+swap accounting is active */
  static bool do_memsw_account(void)
  {
-@@ -1831,7 +1834,7 @@ static void drain_all_stock(struct mem_c
+@@ -1850,7 +1853,7 @@ static void drain_all_stock(struct mem_c
  	 * as well as workers from this path always operate on the local
  	 * per-cpu data. CPU up doesn't touch memcg_stock at all.
  	 */
@@ -35562,7 +35562,7 @@
  	for_each_online_cpu(cpu) {
  		struct memcg_stock_pcp *stock = &per_cpu(memcg_stock, cpu);
  		struct mem_cgroup *memcg;
-@@ -1851,7 +1854,7 @@ static void drain_all_stock(struct mem_c
+@@ -1870,7 +1873,7 @@ static void drain_all_stock(struct mem_c
  		}
  		css_put(&memcg->css);
  	}
@@ -35571,7 +35571,7 @@
  	mutex_unlock(&percpu_charge_mutex);
  }
  
-@@ -4631,12 +4634,12 @@ static int mem_cgroup_move_account(struc
+@@ -4650,12 +4653,12 @@ static int mem_cgroup_move_account(struc
  
  	ret = 0;
  
@@ -35586,7 +35586,7 @@
  out_unlock:
  	unlock_page(page);
  out:
-@@ -5579,10 +5582,10 @@ void mem_cgroup_commit_charge(struct pag
+@@ -5598,10 +5601,10 @@ void mem_cgroup_commit_charge(struct pag
  
  	commit_charge(page, memcg, lrucare);
  
@@ -35599,7 +35599,7 @@
  
  	if (do_memsw_account() && PageSwapCache(page)) {
  		swp_entry_t entry = { .val = page_private(page) };
-@@ -5651,7 +5654,7 @@ static void uncharge_batch(const struct
+@@ -5670,7 +5673,7 @@ static void uncharge_batch(const struct
  		memcg_oom_recover(ug->memcg);
  	}
  
@@ -35608,7 +35608,7 @@
  	__this_cpu_sub(ug->memcg->stat->count[MEMCG_RSS], ug->nr_anon);
  	__this_cpu_sub(ug->memcg->stat->count[MEMCG_CACHE], ug->nr_file);
  	__this_cpu_sub(ug->memcg->stat->count[MEMCG_RSS_HUGE], ug->nr_huge);
-@@ -5659,7 +5662,7 @@ static void uncharge_batch(const struct
+@@ -5678,7 +5681,7 @@ static void uncharge_batch(const struct
  	__this_cpu_add(ug->memcg->stat->events[PGPGOUT], ug->pgpgout);
  	__this_cpu_add(ug->memcg->stat->nr_page_events, nr_pages);
  	memcg_check_events(ug->memcg, ug->dummy_page);
@@ -35617,7 +35617,7 @@
  
  	if (!mem_cgroup_is_root(ug->memcg))
  		css_put_many(&ug->memcg->css, nr_pages);
-@@ -5822,10 +5825,10 @@ void mem_cgroup_migrate(struct page *old
+@@ -5841,10 +5844,10 @@ void mem_cgroup_migrate(struct page *old
  
  	commit_charge(newpage, memcg, false);
  
@@ -35630,7 +35630,7 @@
  }
  
  DEFINE_STATIC_KEY_FALSE(memcg_sockets_enabled_key);
-@@ -6017,6 +6020,7 @@ void mem_cgroup_swapout(struct page *pag
+@@ -6036,6 +6039,7 @@ void mem_cgroup_swapout(struct page *pag
  	struct mem_cgroup *memcg, *swap_memcg;
  	unsigned int nr_entries;
  	unsigned short oldid;
@@ -35638,7 +35638,7 @@
  
  	VM_BUG_ON_PAGE(PageLRU(page), page);
  	VM_BUG_ON_PAGE(page_count(page), page);
-@@ -6062,13 +6066,17 @@ void mem_cgroup_swapout(struct page *pag
+@@ -6081,13 +6085,17 @@ void mem_cgroup_swapout(struct page *pag
  	 * important here to have the interrupts disabled because it is the
  	 * only synchronisation we have for udpating the per-CPU variables.
  	 */
@@ -36953,15 +36953,15 @@
  }
 --- a/mm/zsmalloc.c
 +++ b/mm/zsmalloc.c
-@@ -53,6 +53,7 @@
- #include <linux/mount.h>
+@@ -54,6 +54,7 @@
  #include <linux/migrate.h>
+ #include <linux/wait.h>
  #include <linux/pagemap.h>
 +#include <linux/locallock.h>
  
  #define ZSPAGE_MAGIC	0x58
  
-@@ -70,9 +71,22 @@
+@@ -71,9 +72,22 @@
   */
  #define ZS_MAX_ZSPAGE_ORDER 2
  #define ZS_MAX_PAGES_PER_ZSPAGE (_AC(1, UL) << ZS_MAX_ZSPAGE_ORDER)
@@ -36985,7 +36985,7 @@
  /*
   * Object location (<PFN>, <obj_idx>) is encoded as
   * as single (unsigned long) handle value.
-@@ -320,7 +334,7 @@ static void SetZsPageMovable(struct zs_p
+@@ -325,7 +339,7 @@ static void SetZsPageMovable(struct zs_p
  
  static int create_cache(struct zs_pool *pool)
  {
@@ -36994,7 +36994,7 @@
  					0, 0, NULL);
  	if (!pool->handle_cachep)
  		return 1;
-@@ -344,10 +358,27 @@ static void destroy_cache(struct zs_pool
+@@ -349,10 +363,27 @@ static void destroy_cache(struct zs_pool
  
  static unsigned long cache_alloc_handle(struct zs_pool *pool, gfp_t gfp)
  {
@@ -37024,7 +37024,7 @@
  static void cache_free_handle(struct zs_pool *pool, unsigned long handle)
  {
  	kmem_cache_free(pool->handle_cachep, (void *)handle);
-@@ -366,12 +397,18 @@ static void cache_free_zspage(struct zs_
+@@ -371,12 +402,18 @@ static void cache_free_zspage(struct zs_
  
  static void record_obj(unsigned long handle, unsigned long obj)
  {
@@ -37043,7 +37043,7 @@
  }
  
  /* zpool driver */
-@@ -460,6 +497,7 @@ MODULE_ALIAS("zpool-zsmalloc");
+@@ -465,6 +502,7 @@ MODULE_ALIAS("zpool-zsmalloc");
  
  /* per-cpu VM mapping areas for zspage accesses that cross page boundaries */
  static DEFINE_PER_CPU(struct mapping_area, zs_map_area);
@@ -37051,7 +37051,7 @@
  
  static bool is_zspage_isolated(struct zspage *zspage)
  {
-@@ -898,7 +936,13 @@ static unsigned long location_to_obj(str
+@@ -903,7 +941,13 @@ static unsigned long location_to_obj(str
  
  static unsigned long handle_to_obj(unsigned long handle)
  {
@@ -37065,7 +37065,7 @@
  }
  
  static unsigned long obj_to_head(struct page *page, void *obj)
-@@ -912,22 +956,46 @@ static unsigned long obj_to_head(struct
+@@ -917,22 +961,46 @@ static unsigned long obj_to_head(struct
  
  static inline int testpin_tag(unsigned long handle)
  {
@@ -37112,7 +37112,7 @@
  }
  
  static void reset_page(struct page *page)
-@@ -1365,7 +1433,7 @@ void *zs_map_object(struct zs_pool *pool
+@@ -1370,7 +1438,7 @@ void *zs_map_object(struct zs_pool *pool
  	class = pool->size_class[class_idx];
  	off = (class->size * obj_idx) & ~PAGE_MASK;
  
@@ -37121,7 +37121,7 @@
  	area->vm_mm = mm;
  	if (off + class->size <= PAGE_SIZE) {
  		/* this object is contained entirely within a page */
-@@ -1419,7 +1487,7 @@ void zs_unmap_object(struct zs_pool *poo
+@@ -1424,7 +1492,7 @@ void zs_unmap_object(struct zs_pool *poo
  
  		__zs_unmap_object(area, pages, off, class->size);
  	}
@@ -37834,7 +37834,7 @@
  	netdev_queue_numa_node_write(queue, NUMA_NO_NODE);
  	queue->dev = dev;
  #ifdef CONFIG_BQL
-@@ -8510,6 +8544,7 @@ static int dev_cpu_dead(unsigned int old
+@@ -8512,6 +8546,7 @@ static int dev_cpu_dead(unsigned int old
  
  	raise_softirq_irqoff(NET_TX_SOFTIRQ);
  	local_irq_enable();
@@ -37842,7 +37842,7 @@
  
  #ifdef CONFIG_RPS
  	remsd = oldsd->rps_ipi_list;
-@@ -8523,10 +8558,13 @@ static int dev_cpu_dead(unsigned int old
+@@ -8525,10 +8560,13 @@ static int dev_cpu_dead(unsigned int old
  		netif_rx_ni(skb);
  		input_queue_head_incr(oldsd);
  	}
@@ -37857,7 +37857,7 @@
  
  	return 0;
  }
-@@ -8830,8 +8868,9 @@ static int __init net_dev_init(void)
+@@ -8834,8 +8872,9 @@ static int __init net_dev_init(void)
  
  		INIT_WORK(flush, flush_backlog);
  
@@ -37984,6 +37984,129 @@
  
  #include <net/protocol.h>
  #include <net/dst.h>
+@@ -331,6 +332,8 @@ struct napi_alloc_cache {
+ 
+ static DEFINE_PER_CPU(struct page_frag_cache, netdev_alloc_cache);
+ static DEFINE_PER_CPU(struct napi_alloc_cache, napi_alloc_cache);
++static DEFINE_LOCAL_IRQ_LOCK(netdev_alloc_lock);
++static DEFINE_LOCAL_IRQ_LOCK(napi_alloc_cache_lock);
+ 
+ static void *__netdev_alloc_frag(unsigned int fragsz, gfp_t gfp_mask)
+ {
+@@ -338,10 +341,10 @@ static void *__netdev_alloc_frag(unsigne
+ 	unsigned long flags;
+ 	void *data;
+ 
+-	local_irq_save(flags);
++	local_lock_irqsave(netdev_alloc_lock, flags);
+ 	nc = this_cpu_ptr(&netdev_alloc_cache);
+ 	data = page_frag_alloc(nc, fragsz, gfp_mask);
+-	local_irq_restore(flags);
++	local_unlock_irqrestore(netdev_alloc_lock, flags);
+ 	return data;
+ }
+ 
+@@ -362,9 +365,13 @@ EXPORT_SYMBOL(netdev_alloc_frag);
+ 
+ static void *__napi_alloc_frag(unsigned int fragsz, gfp_t gfp_mask)
+ {
+-	struct napi_alloc_cache *nc = this_cpu_ptr(&napi_alloc_cache);
++	struct napi_alloc_cache *nc;
++	void *data;
+ 
+-	return page_frag_alloc(&nc->page, fragsz, gfp_mask);
++	nc = &get_locked_var(napi_alloc_cache_lock, napi_alloc_cache);
++	data =  page_frag_alloc(&nc->page, fragsz, gfp_mask);
++	put_locked_var(napi_alloc_cache_lock, napi_alloc_cache);
++	return data;
+ }
+ 
+ void *napi_alloc_frag(unsigned int fragsz)
+@@ -413,13 +420,13 @@ struct sk_buff *__netdev_alloc_skb(struc
+ 	if (sk_memalloc_socks())
+ 		gfp_mask |= __GFP_MEMALLOC;
+ 
+-	local_irq_save(flags);
++	local_lock_irqsave(netdev_alloc_lock, flags);
+ 
+ 	nc = this_cpu_ptr(&netdev_alloc_cache);
+ 	data = page_frag_alloc(nc, len, gfp_mask);
+ 	pfmemalloc = nc->pfmemalloc;
+ 
+-	local_irq_restore(flags);
++	local_unlock_irqrestore(netdev_alloc_lock, flags);
+ 
+ 	if (unlikely(!data))
+ 		return NULL;
+@@ -460,9 +467,10 @@ EXPORT_SYMBOL(__netdev_alloc_skb);
+ struct sk_buff *__napi_alloc_skb(struct napi_struct *napi, unsigned int len,
+ 				 gfp_t gfp_mask)
+ {
+-	struct napi_alloc_cache *nc = this_cpu_ptr(&napi_alloc_cache);
++	struct napi_alloc_cache *nc;
+ 	struct sk_buff *skb;
+ 	void *data;
++	bool pfmemalloc;
+ 
+ 	len += NET_SKB_PAD + NET_IP_ALIGN;
+ 
+@@ -480,7 +488,10 @@ struct sk_buff *__napi_alloc_skb(struct
+ 	if (sk_memalloc_socks())
+ 		gfp_mask |= __GFP_MEMALLOC;
+ 
++	nc = &get_locked_var(napi_alloc_cache_lock, napi_alloc_cache);
+ 	data = page_frag_alloc(&nc->page, len, gfp_mask);
++	pfmemalloc = nc->page.pfmemalloc;
++	put_locked_var(napi_alloc_cache_lock, napi_alloc_cache);
+ 	if (unlikely(!data))
+ 		return NULL;
+ 
+@@ -491,7 +502,7 @@ struct sk_buff *__napi_alloc_skb(struct
+ 	}
+ 
+ 	/* use OR instead of assignment to avoid clearing of bits in mask */
+-	if (nc->page.pfmemalloc)
++	if (pfmemalloc)
+ 		skb->pfmemalloc = 1;
+ 	skb->head_frag = 1;
+ 
+@@ -739,23 +750,26 @@ void __consume_stateless_skb(struct sk_b
+ 
+ void __kfree_skb_flush(void)
+ {
+-	struct napi_alloc_cache *nc = this_cpu_ptr(&napi_alloc_cache);
++	struct napi_alloc_cache *nc;
+ 
++	nc = &get_locked_var(napi_alloc_cache_lock, napi_alloc_cache);
+ 	/* flush skb_cache if containing objects */
+ 	if (nc->skb_count) {
+ 		kmem_cache_free_bulk(skbuff_head_cache, nc->skb_count,
+ 				     nc->skb_cache);
+ 		nc->skb_count = 0;
+ 	}
++	put_locked_var(napi_alloc_cache_lock, napi_alloc_cache);
+ }
+ 
+ static inline void _kfree_skb_defer(struct sk_buff *skb)
+ {
+-	struct napi_alloc_cache *nc = this_cpu_ptr(&napi_alloc_cache);
++	struct napi_alloc_cache *nc;
+ 
+ 	/* drop skb->head and call any destructors for packet */
+ 	skb_release_all(skb);
+ 
++	nc = &get_locked_var(napi_alloc_cache_lock, napi_alloc_cache);
+ 	/* record skb to CPU local list */
+ 	nc->skb_cache[nc->skb_count++] = skb;
+ 
+@@ -770,6 +784,7 @@ static inline void _kfree_skb_defer(stru
+ 				     nc->skb_cache);
+ 		nc->skb_count = 0;
+ 	}
++	put_locked_var(napi_alloc_cache_lock, napi_alloc_cache);
+ }
+ void __kfree_skb_defer(struct sk_buff *skb)
+ {
 --- a/net/core/sock.c
 +++ b/net/core/sock.c
 @@ -2773,12 +2773,11 @@ void lock_sock_nested(struct sock *sk, i
@@ -38318,7 +38441,7 @@
  		setup_timer(&x->rtimer, xfrm_replay_timer_handler,
  				(unsigned long)x);
  		x->curlft.add_time = get_seconds();
-@@ -1031,7 +1032,9 @@ found:
+@@ -1030,7 +1031,9 @@ found:
  				hlist_add_head_rcu(&x->byspi, net->xfrm.state_byspi + h);
  			}
  			x->lft.hard_add_expires_seconds = net->xfrm.sysctl_acq_expires;
@@ -38329,7 +38452,7 @@
  			net->xfrm.state_num++;
  			xfrm_hash_grow_check(net, x->bydst.next != NULL);
  			spin_unlock_bh(&net->xfrm.xfrm_state_lock);
-@@ -1142,7 +1145,7 @@ static void __xfrm_state_insert(struct x
+@@ -1141,7 +1144,7 @@ static void __xfrm_state_insert(struct x
  		hlist_add_head_rcu(&x->byspi, net->xfrm.state_byspi + h);
  	}
  
@@ -38338,7 +38461,7 @@
  	if (x->replay_maxage)
  		mod_timer(&x->rtimer, jiffies + x->replay_maxage);
  
-@@ -1246,7 +1249,9 @@ static struct xfrm_state *__find_acq_cor
+@@ -1245,7 +1248,9 @@ static struct xfrm_state *__find_acq_cor
  		x->mark.m = m->m;
  		x->lft.hard_add_expires_seconds = net->xfrm.sysctl_acq_expires;
  		xfrm_state_hold(x);
@@ -38349,7 +38472,7 @@
  		list_add(&x->km.all, &net->xfrm.state_all);
  		hlist_add_head_rcu(&x->bydst, net->xfrm.state_bydst + h);
  		h = xfrm_src_hash(net, daddr, saddr, family);
-@@ -1546,7 +1551,8 @@ out:
+@@ -1545,7 +1550,8 @@ out:
  		memcpy(&x1->lft, &x->lft, sizeof(x1->lft));
  		x1->km.dying = 0;
  
@@ -38359,7 +38482,7 @@
  		if (x1->curlft.use_time)
  			xfrm_state_check_expire(x1);
  
-@@ -1570,7 +1576,7 @@ int xfrm_state_check_expire(struct xfrm_
+@@ -1569,7 +1575,7 @@ int xfrm_state_check_expire(struct xfrm_
  	if (x->curlft.bytes >= x->lft.hard_byte_limit ||
  	    x->curlft.packets >= x->lft.hard_packet_limit) {
  		x->km.state = XFRM_STATE_EXPIRED;
@@ -38989,7 +39112,7 @@
  	return __this_cpu_read(kvm_arm_running_vcpu);
  }
  
-@@ -655,7 +653,7 @@ int kvm_arch_vcpu_ioctl_run(struct kvm_v
+@@ -665,7 +663,7 @@ int kvm_arch_vcpu_ioctl_run(struct kvm_v
  		 * involves poking the GIC, which must be done in a
  		 * non-preemptible context.
  		 */
@@ -38998,7 +39121,7 @@
  
  		kvm_pmu_flush_hwstate(vcpu);
  
-@@ -692,7 +690,7 @@ int kvm_arch_vcpu_ioctl_run(struct kvm_v
+@@ -702,7 +700,7 @@ int kvm_arch_vcpu_ioctl_run(struct kvm_v
  			kvm_pmu_sync_hwstate(vcpu);
  			kvm_timer_sync_hwstate(vcpu);
  			kvm_vgic_sync_hwstate(vcpu);
@@ -39007,7 +39130,7 @@
  			continue;
  		}
  
-@@ -747,7 +745,7 @@ int kvm_arch_vcpu_ioctl_run(struct kvm_v
+@@ -757,7 +755,7 @@ int kvm_arch_vcpu_ioctl_run(struct kvm_v
  
  		kvm_vgic_sync_hwstate(vcpu);
  
