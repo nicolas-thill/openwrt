@@ -2323,7 +2323,7 @@
  	call	preempt_schedule_irq
 --- a/arch/x86/entry/entry_64.S
 +++ b/arch/x86/entry/entry_64.S
-@@ -490,7 +490,23 @@ retint_kernel:
+@@ -493,7 +493,23 @@ retint_kernel:
  	btl	$9, EFLAGS(%rsp)		/* were interrupts off? */
  	jnc	1f
  0:	cmpl	$0, PER_CPU_VAR(__preempt_count)
@@ -2347,7 +2347,7 @@
  	call	preempt_schedule_irq
  	jmp	0b
  1:
-@@ -840,6 +856,7 @@ bad_gs:
+@@ -843,6 +859,7 @@ bad_gs:
  	jmp	2b
  	.previous
  
@@ -2355,7 +2355,7 @@
  /* Call softirq on interrupt stack. Interrupts are off. */
  ENTRY(do_softirq_own_stack)
  	pushq	%rbp
-@@ -852,6 +869,7 @@ ENTRY(do_softirq_own_stack)
+@@ -855,6 +872,7 @@ ENTRY(do_softirq_own_stack)
  	decl	PER_CPU_VAR(irq_count)
  	ret
  END(do_softirq_own_stack)
@@ -2950,7 +2950,7 @@
  	 * APIC is created enabled. This will prevent kvm_lapic_set_base from
 --- a/arch/x86/kvm/x86.c
 +++ b/arch/x86/kvm/x86.c
-@@ -6143,6 +6143,13 @@ int kvm_arch_init(void *opaque)
+@@ -6144,6 +6144,13 @@ int kvm_arch_init(void *opaque)
  		goto out;
  	}
  
@@ -3284,7 +3284,7 @@
  
  	/*
  	 * Init percpu_ref in atomic mode so that it's faster to shutdown.
-@@ -3199,7 +3212,7 @@ static void queue_unplugged(struct reque
+@@ -3200,7 +3213,7 @@ static void queue_unplugged(struct reque
  		blk_run_queue_async(q);
  	else
  		__blk_run_queue(q);
@@ -3293,7 +3293,7 @@
  }
  
  static void flush_plug_callbacks(struct blk_plug *plug, bool from_schedule)
-@@ -3247,7 +3260,6 @@ EXPORT_SYMBOL(blk_check_plugged);
+@@ -3248,7 +3261,6 @@ EXPORT_SYMBOL(blk_check_plugged);
  void blk_flush_plug_list(struct blk_plug *plug, bool from_schedule)
  {
  	struct request_queue *q;
@@ -3301,7 +3301,7 @@
  	struct request *rq;
  	LIST_HEAD(list);
  	unsigned int depth;
-@@ -3267,11 +3279,6 @@ void blk_flush_plug_list(struct blk_plug
+@@ -3268,11 +3280,6 @@ void blk_flush_plug_list(struct blk_plug
  	q = NULL;
  	depth = 0;
  
@@ -3313,7 +3313,7 @@
  	while (!list_empty(&list)) {
  		rq = list_entry_rq(list.next);
  		list_del_init(&rq->queuelist);
-@@ -3284,7 +3291,7 @@ void blk_flush_plug_list(struct blk_plug
+@@ -3285,7 +3292,7 @@ void blk_flush_plug_list(struct blk_plug
  				queue_unplugged(q, depth, from_schedule);
  			q = rq->q;
  			depth = 0;
@@ -3322,7 +3322,7 @@
  		}
  
  		/*
-@@ -3311,8 +3318,6 @@ void blk_flush_plug_list(struct blk_plug
+@@ -3312,8 +3319,6 @@ void blk_flush_plug_list(struct blk_plug
  	 */
  	if (q)
  		queue_unplugged(q, depth, from_schedule);
@@ -3331,7 +3331,7 @@
  }
  
  void blk_finish_plug(struct blk_plug *plug)
-@@ -3561,6 +3566,8 @@ int __init blk_dev_init(void)
+@@ -3562,6 +3567,8 @@ int __init blk_dev_init(void)
  	if (!kblockd_workqueue)
  		panic("Failed to create kblockd\n");
  
@@ -3656,7 +3656,7 @@
  
  	return consumed;
  }
-@@ -719,7 +719,7 @@ static void ata_pio_sector(struct ata_qu
+@@ -723,7 +723,7 @@ static void ata_pio_sector(struct ata_qu
  		unsigned long flags;
  
  		/* FIXME: use a bounce buffer */
@@ -3665,7 +3665,7 @@
  		buf = kmap_atomic(page);
  
  		/* do the actual data transfer */
-@@ -727,7 +727,7 @@ static void ata_pio_sector(struct ata_qu
+@@ -731,7 +731,7 @@ static void ata_pio_sector(struct ata_qu
  				       do_write);
  
  		kunmap_atomic(buf);
@@ -3674,7 +3674,7 @@
  	} else {
  		buf = page_address(page);
  		ap->ops->sff_data_xfer(qc->dev, buf + offset, qc->sect_size,
-@@ -864,7 +864,7 @@ next_sg:
+@@ -870,7 +870,7 @@ next_sg:
  		unsigned long flags;
  
  		/* FIXME: use bounce buffer */
@@ -3683,7 +3683,7 @@
  		buf = kmap_atomic(page);
  
  		/* do the actual data transfer */
-@@ -872,7 +872,7 @@ next_sg:
+@@ -878,7 +878,7 @@ next_sg:
  								count, rw);
  
  		kunmap_atomic(buf);
@@ -5605,7 +5605,7 @@
  #include <linux/uaccess.h>
  #include <linux/pm_runtime.h>
  #include <linux/timer.h>
-@@ -3142,9 +3143,9 @@ void serial8250_console_write(struct uar
+@@ -3143,9 +3144,9 @@ void serial8250_console_write(struct uar
  
  	serial8250_rpm_get(up);
  
@@ -5697,7 +5697,7 @@
  	atomic_dec(&urb->use_count);
 --- a/drivers/usb/gadget/function/f_fs.c
 +++ b/drivers/usb/gadget/function/f_fs.c
-@@ -1597,7 +1597,7 @@ static void ffs_data_put(struct ffs_data
+@@ -1599,7 +1599,7 @@ static void ffs_data_put(struct ffs_data
  		pr_info("%s(): freeing\n", __func__);
  		ffs_data_clear(ffs);
  		BUG_ON(waitqueue_active(&ffs->ev.waitq) ||
@@ -6381,7 +6381,7 @@
  	trace_nfs_rmdir_exit(dir, dentry, error);
 --- a/fs/nfs/inode.c
 +++ b/fs/nfs/inode.c
-@@ -1957,7 +1957,11 @@ static void init_once(void *foo)
+@@ -1958,7 +1958,11 @@ static void init_once(void *foo)
  	nfsi->nrequests = 0;
  	nfsi->commit_info.ncommit = 0;
  	atomic_set(&nfsi->commit_info.rpcs_out, 0);
@@ -6406,7 +6406,7 @@
  
 --- a/fs/nfs/nfs4proc.c
 +++ b/fs/nfs/nfs4proc.c
-@@ -2706,7 +2706,7 @@ static int _nfs4_open_and_get_state(stru
+@@ -2708,7 +2708,7 @@ static int _nfs4_open_and_get_state(stru
  	unsigned int seq;
  	int ret;
  
@@ -6415,7 +6415,7 @@
  
  	ret = _nfs4_proc_open(opendata);
  	if (ret != 0)
-@@ -2744,7 +2744,7 @@ static int _nfs4_open_and_get_state(stru
+@@ -2746,7 +2746,7 @@ static int _nfs4_open_and_get_state(stru
  
  	if (d_inode(dentry) == state->inode) {
  		nfs_inode_attach_open_context(ctx);
@@ -6435,7 +6435,7 @@
  	mutex_init(&sp->so_delegreturn_mutex);
  	return sp;
  }
-@@ -1507,8 +1507,12 @@ static int nfs4_reclaim_open_state(struc
+@@ -1522,8 +1522,12 @@ static int nfs4_reclaim_open_state(struc
  	 * recovering after a network partition or a reboot from a
  	 * server that doesn't support a grace period.
  	 */
@@ -6449,7 +6449,7 @@
  restart:
  	list_for_each_entry(state, &sp->so_states, open_states) {
  		if (!test_and_clear_bit(ops->state_flag_bit, &state->flags))
-@@ -1577,14 +1581,20 @@ restart:
+@@ -1592,14 +1596,20 @@ restart:
  		spin_lock(&sp->so_lock);
  		goto restart;
  	}
@@ -6633,7 +6633,7 @@
  			goto end_instantiate;
 --- a/fs/proc/proc_sysctl.c
 +++ b/fs/proc/proc_sysctl.c
-@@ -680,7 +680,7 @@ static bool proc_sys_fill_cache(struct f
+@@ -684,7 +684,7 @@ static bool proc_sys_fill_cache(struct f
  
  	child = d_lookup(dir, &qname);
  	if (!child) {
@@ -10920,7 +10920,7 @@
 +#endif
 --- a/include/net/netns/ipv4.h
 +++ b/include/net/netns/ipv4.h
-@@ -69,6 +69,7 @@ struct netns_ipv4 {
+@@ -70,6 +70,7 @@ struct netns_ipv4 {
  
  	int sysctl_icmp_echo_ignore_all;
  	int sysctl_icmp_echo_ignore_broadcasts;
@@ -12265,7 +12265,7 @@
 +	put_task_stack(tsk);
 +
  	cgroup_free(tsk);
- 	task_numa_free(tsk);
+ 	task_numa_free(tsk, true);
  	security_task_free(tsk);
 @@ -398,7 +410,18 @@ void __put_task_struct(struct task_struc
  	if (!profile_handoff_task(tsk))
@@ -18823,7 +18823,7 @@
  #undef __PN
 --- a/kernel/sched/fair.c
 +++ b/kernel/sched/fair.c
-@@ -3523,7 +3523,7 @@ check_preempt_tick(struct cfs_rq *cfs_rq
+@@ -3539,7 +3539,7 @@ check_preempt_tick(struct cfs_rq *cfs_rq
  	ideal_runtime = sched_slice(cfs_rq, curr);
  	delta_exec = curr->sum_exec_runtime - curr->prev_sum_exec_runtime;
  	if (delta_exec > ideal_runtime) {
@@ -18832,7 +18832,7 @@
  		/*
  		 * The current task ran long enough, ensure it doesn't get
  		 * re-elected due to buddy favours.
-@@ -3547,7 +3547,7 @@ check_preempt_tick(struct cfs_rq *cfs_rq
+@@ -3563,7 +3563,7 @@ check_preempt_tick(struct cfs_rq *cfs_rq
  		return;
  
  	if (delta > ideal_runtime)
@@ -18841,7 +18841,7 @@
  }
  
  static void
-@@ -3689,7 +3689,7 @@ entity_tick(struct cfs_rq *cfs_rq, struc
+@@ -3705,7 +3705,7 @@ entity_tick(struct cfs_rq *cfs_rq, struc
  	 * validating it and just reschedule.
  	 */
  	if (queued) {
@@ -18850,7 +18850,7 @@
  		return;
  	}
  	/*
-@@ -3871,7 +3871,7 @@ static void __account_cfs_rq_runtime(str
+@@ -3889,7 +3889,7 @@ static void __account_cfs_rq_runtime(str
  	 * hierarchy can be throttled
  	 */
  	if (!assign_cfs_rq_runtime(cfs_rq) && likely(cfs_rq->curr))
@@ -18859,7 +18859,7 @@
  }
  
  static __always_inline
-@@ -4540,7 +4540,7 @@ static void hrtick_start_fair(struct rq
+@@ -4561,7 +4561,7 @@ static void hrtick_start_fair(struct rq
  
  		if (delta < 0) {
  			if (rq->curr == p)
@@ -18868,7 +18868,7 @@
  			return;
  		}
  		hrtick_start(rq, delta);
-@@ -5908,7 +5908,7 @@ static void check_preempt_wakeup(struct
+@@ -5929,7 +5929,7 @@ static void check_preempt_wakeup(struct
  	return;
  
  preempt:
@@ -18877,7 +18877,7 @@
  	/*
  	 * Only set the backward buddy when the current task is still
  	 * on the rq. This can happen when a wakeup gets interleaved
-@@ -8634,7 +8634,7 @@ static void task_fork_fair(struct task_s
+@@ -8655,7 +8655,7 @@ static void task_fork_fair(struct task_s
  		 * 'current' within the tree based on its new key value.
  		 */
  		swap(curr->vruntime, se->vruntime);
@@ -18886,7 +18886,7 @@
  	}
  
  	se->vruntime -= cfs_rq->min_vruntime;
-@@ -8658,7 +8658,7 @@ prio_changed_fair(struct rq *rq, struct
+@@ -8679,7 +8679,7 @@ prio_changed_fair(struct rq *rq, struct
  	 */
  	if (rq->curr == p) {
  		if (p->prio > oldprio)
@@ -24465,7 +24465,7 @@
   */
 --- a/lib/scatterlist.c
 +++ b/lib/scatterlist.c
-@@ -620,7 +620,7 @@ void sg_miter_stop(struct sg_mapping_ite
+@@ -621,7 +621,7 @@ void sg_miter_stop(struct sg_mapping_ite
  			flush_kernel_dcache_page(miter->page);
  
  		if (miter->__flags & SG_MITER_ATOMIC) {
@@ -24474,7 +24474,7 @@
  			kunmap_atomic(miter->addr);
  		} else
  			kunmap(miter->page);
-@@ -664,7 +664,7 @@ size_t sg_copy_buffer(struct scatterlist
+@@ -665,7 +665,7 @@ size_t sg_copy_buffer(struct scatterlist
  	if (!sg_miter_skip(&miter, skip))
  		return false;
  
@@ -24483,7 +24483,7 @@
  
  	while (sg_miter_next(&miter) && offset < buflen) {
  		unsigned int len;
-@@ -681,7 +681,7 @@ size_t sg_copy_buffer(struct scatterlist
+@@ -682,7 +682,7 @@ size_t sg_copy_buffer(struct scatterlist
  
  	sg_miter_stop(&miter);
  
@@ -24627,7 +24627,7 @@
  /* Whether legacy memory+swap accounting is active */
  static bool do_memsw_account(void)
  {
-@@ -1795,7 +1798,7 @@ static void drain_all_stock(struct mem_c
+@@ -1814,7 +1817,7 @@ static void drain_all_stock(struct mem_c
  		return;
  	/* Notify other cpus that system-wide "drain" is running */
  	get_online_cpus();
@@ -24636,7 +24636,7 @@
  	for_each_online_cpu(cpu) {
  		struct memcg_stock_pcp *stock = &per_cpu(memcg_stock, cpu);
  		struct mem_cgroup *memcg;
-@@ -1812,7 +1815,7 @@ static void drain_all_stock(struct mem_c
+@@ -1831,7 +1834,7 @@ static void drain_all_stock(struct mem_c
  				schedule_work_on(cpu, &stock->work);
  		}
  	}
@@ -24645,7 +24645,7 @@
  	put_online_cpus();
  	mutex_unlock(&percpu_charge_mutex);
  }
-@@ -4565,12 +4568,12 @@ static int mem_cgroup_move_account(struc
+@@ -4584,12 +4587,12 @@ static int mem_cgroup_move_account(struc
  
  	ret = 0;
  
@@ -24660,7 +24660,7 @@
  out_unlock:
  	unlock_page(page);
  out:
-@@ -5445,10 +5448,10 @@ void mem_cgroup_commit_charge(struct pag
+@@ -5464,10 +5467,10 @@ void mem_cgroup_commit_charge(struct pag
  
  	commit_charge(page, memcg, lrucare);
  
@@ -24673,7 +24673,7 @@
  
  	if (do_memsw_account() && PageSwapCache(page)) {
  		swp_entry_t entry = { .val = page_private(page) };
-@@ -5504,14 +5507,14 @@ static void uncharge_batch(struct mem_cg
+@@ -5523,14 +5526,14 @@ static void uncharge_batch(struct mem_cg
  		memcg_oom_recover(memcg);
  	}
  
@@ -24690,7 +24690,7 @@
  
  	if (!mem_cgroup_is_root(memcg))
  		css_put_many(&memcg->css, nr_pages);
-@@ -5666,10 +5669,10 @@ void mem_cgroup_migrate(struct page *old
+@@ -5685,10 +5688,10 @@ void mem_cgroup_migrate(struct page *old
  
  	commit_charge(newpage, memcg, false);
  
@@ -24703,7 +24703,7 @@
  }
  
  DEFINE_STATIC_KEY_FALSE(memcg_sockets_enabled_key);
-@@ -5860,6 +5863,7 @@ void mem_cgroup_swapout(struct page *pag
+@@ -5879,6 +5882,7 @@ void mem_cgroup_swapout(struct page *pag
  {
  	struct mem_cgroup *memcg, *swap_memcg;
  	unsigned short oldid;
@@ -24711,7 +24711,7 @@
  
  	VM_BUG_ON_PAGE(PageLRU(page), page);
  	VM_BUG_ON_PAGE(page_count(page), page);
-@@ -5900,12 +5904,16 @@ void mem_cgroup_swapout(struct page *pag
+@@ -5919,12 +5923,16 @@ void mem_cgroup_swapout(struct page *pag
  	 * important here to have the interrupts disabled because it is the
  	 * only synchronisation we have for udpating the per-CPU variables.
  	 */
@@ -26064,15 +26064,15 @@
  }
 --- a/mm/zsmalloc.c
 +++ b/mm/zsmalloc.c
-@@ -53,6 +53,7 @@
- #include <linux/mount.h>
+@@ -54,6 +54,7 @@
  #include <linux/migrate.h>
+ #include <linux/wait.h>
  #include <linux/pagemap.h>
 +#include <linux/locallock.h>
  
  #define ZSPAGE_MAGIC	0x58
  
-@@ -70,9 +71,22 @@
+@@ -71,9 +72,22 @@
   */
  #define ZS_MAX_ZSPAGE_ORDER 2
  #define ZS_MAX_PAGES_PER_ZSPAGE (_AC(1, UL) << ZS_MAX_ZSPAGE_ORDER)
@@ -26096,7 +26096,7 @@
  /*
   * Object location (<PFN>, <obj_idx>) is encoded as
   * as single (unsigned long) handle value.
-@@ -327,7 +341,7 @@ static void SetZsPageMovable(struct zs_p
+@@ -332,7 +346,7 @@ static void SetZsPageMovable(struct zs_p
  
  static int create_cache(struct zs_pool *pool)
  {
@@ -26105,7 +26105,7 @@
  					0, 0, NULL);
  	if (!pool->handle_cachep)
  		return 1;
-@@ -351,10 +365,27 @@ static void destroy_cache(struct zs_pool
+@@ -356,10 +370,27 @@ static void destroy_cache(struct zs_pool
  
  static unsigned long cache_alloc_handle(struct zs_pool *pool, gfp_t gfp)
  {
@@ -26135,7 +26135,7 @@
  static void cache_free_handle(struct zs_pool *pool, unsigned long handle)
  {
  	kmem_cache_free(pool->handle_cachep, (void *)handle);
-@@ -373,12 +404,18 @@ static void cache_free_zspage(struct zs_
+@@ -378,12 +409,18 @@ static void cache_free_zspage(struct zs_
  
  static void record_obj(unsigned long handle, unsigned long obj)
  {
@@ -26154,7 +26154,7 @@
  }
  
  /* zpool driver */
-@@ -467,6 +504,7 @@ MODULE_ALIAS("zpool-zsmalloc");
+@@ -472,6 +509,7 @@ MODULE_ALIAS("zpool-zsmalloc");
  
  /* per-cpu VM mapping areas for zspage accesses that cross page boundaries */
  static DEFINE_PER_CPU(struct mapping_area, zs_map_area);
@@ -26162,7 +26162,7 @@
  
  static bool is_zspage_isolated(struct zspage *zspage)
  {
-@@ -905,7 +943,13 @@ static unsigned long location_to_obj(str
+@@ -910,7 +948,13 @@ static unsigned long location_to_obj(str
  
  static unsigned long handle_to_obj(unsigned long handle)
  {
@@ -26176,7 +26176,7 @@
  }
  
  static unsigned long obj_to_head(struct page *page, void *obj)
-@@ -919,22 +963,46 @@ static unsigned long obj_to_head(struct
+@@ -924,22 +968,46 @@ static unsigned long obj_to_head(struct
  
  static inline int testpin_tag(unsigned long handle)
  {
@@ -26223,7 +26223,7 @@
  }
  
  static void reset_page(struct page *page)
-@@ -1426,7 +1494,7 @@ void *zs_map_object(struct zs_pool *pool
+@@ -1431,7 +1499,7 @@ void *zs_map_object(struct zs_pool *pool
  	class = pool->size_class[class_idx];
  	off = (class->size * obj_idx) & ~PAGE_MASK;
  
@@ -26232,7 +26232,7 @@
  	area->vm_mm = mm;
  	if (off + class->size <= PAGE_SIZE) {
  		/* this object is contained entirely within a page */
-@@ -1480,7 +1548,7 @@ void zs_unmap_object(struct zs_pool *poo
+@@ -1485,7 +1553,7 @@ void zs_unmap_object(struct zs_pool *poo
  
  		__zs_unmap_object(area, pages, off, class->size);
  	}
@@ -26646,7 +26646,7 @@
  
  	return NOTIFY_OK;
  }
-@@ -8474,8 +8512,9 @@ static int __init net_dev_init(void)
+@@ -8476,8 +8514,9 @@ static int __init net_dev_init(void)
  
  		INIT_WORK(flush, flush_backlog);
  
