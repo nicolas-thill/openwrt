@@ -1220,7 +1220,7 @@
  			local_irq_enable();
 --- a/arch/mips/Kconfig
 +++ b/arch/mips/Kconfig
-@@ -2532,7 +2532,7 @@ config MIPS_ASID_BITS_VARIABLE
+@@ -2529,7 +2529,7 @@ config MIPS_ASID_BITS_VARIABLE
  #
  config HIGHMEM
  	bool "High Memory Support"
@@ -2950,7 +2950,7 @@
  	 * APIC is created enabled. This will prevent kvm_lapic_set_base from
 --- a/arch/x86/kvm/x86.c
 +++ b/arch/x86/kvm/x86.c
-@@ -6144,6 +6144,13 @@ int kvm_arch_init(void *opaque)
+@@ -6164,6 +6164,13 @@ int kvm_arch_init(void *opaque)
  		goto out;
  	}
  
@@ -4787,7 +4787,7 @@
  	}
 --- a/drivers/iommu/amd_iommu.c
 +++ b/drivers/iommu/amd_iommu.c
-@@ -1943,10 +1943,10 @@ static int __attach_device(struct iommu_
+@@ -1949,10 +1949,10 @@ static int __attach_device(struct iommu_
  	int ret;
  
  	/*
@@ -4801,7 +4801,7 @@
  
  	/* lock domain */
  	spin_lock(&domain->lock);
-@@ -2114,10 +2114,10 @@ static void __detach_device(struct iommu
+@@ -2120,10 +2120,10 @@ static void __detach_device(struct iommu
  	struct protection_domain *domain;
  
  	/*
@@ -4815,7 +4815,7 @@
  
  	if (WARN_ON(!dev_data->domain))
  		return;
-@@ -2303,7 +2303,7 @@ static void queue_add(struct dma_ops_dom
+@@ -2309,7 +2309,7 @@ static void queue_add(struct dma_ops_dom
  	pages     = __roundup_pow_of_two(pages);
  	address >>= PAGE_SHIFT;
  
@@ -4824,7 +4824,7 @@
  	spin_lock_irqsave(&queue->lock, flags);
  
  	if (queue->next == FLUSH_QUEUE_SIZE)
-@@ -2320,8 +2320,6 @@ static void queue_add(struct dma_ops_dom
+@@ -2326,8 +2326,6 @@ static void queue_add(struct dma_ops_dom
  
  	if (atomic_cmpxchg(&queue_timer_on, 0, 1) == 0)
  		mod_timer(&queue_timer, jiffies + msecs_to_jiffies(10));
@@ -4993,7 +4993,7 @@
  }
  
  static struct stripe_head *alloc_stripe(struct kmem_cache *sc, gfp_t gfp,
-@@ -6433,6 +6435,7 @@ static int raid456_cpu_up_prepare(unsign
+@@ -6435,6 +6437,7 @@ static int raid456_cpu_up_prepare(unsign
  		       __func__, cpu);
  		return -ENOMEM;
  	}
@@ -5001,7 +5001,7 @@
  	return 0;
  }
  
-@@ -6443,7 +6446,6 @@ static int raid5_alloc_percpu(struct r5c
+@@ -6445,7 +6448,6 @@ static int raid5_alloc_percpu(struct r5c
  	conf->percpu = alloc_percpu(struct raid5_percpu);
  	if (!conf->percpu)
  		return -ENOMEM;
@@ -14051,7 +14051,7 @@
  			return 0;
  
  		/*
-@@ -3696,6 +3709,7 @@ static void check_flags(unsigned long fl
+@@ -3699,6 +3712,7 @@ static void check_flags(unsigned long fl
  		}
  	}
  
@@ -14059,7 +14059,7 @@
  	/*
  	 * We dont accurately track softirq state in e.g.
  	 * hardirq contexts (such as on 4KSTACKS), so only
-@@ -3710,6 +3724,7 @@ static void check_flags(unsigned long fl
+@@ -3713,6 +3727,7 @@ static void check_flags(unsigned long fl
  			DEBUG_LOCKS_WARN_ON(!current->softirqs_enabled);
  		}
  	}
@@ -14067,7 +14067,7 @@
  
  	if (!debug_locks)
  		print_irqtrace_events(current);
-@@ -4166,7 +4181,7 @@ void lockdep_reset_lock(struct lockdep_m
+@@ -4169,7 +4184,7 @@ void lockdep_reset_lock(struct lockdep_m
  		 * If the class exists we look it up and zap it:
  		 */
  		class = look_up_lock_class(lock, j);
@@ -16873,7 +16873,7 @@
  #ifdef CONFIG_PRINTK
  DECLARE_WAIT_QUEUE_HEAD(log_wait);
  /* the next printk record to read by syslog(READ) or /proc/kmsg */
-@@ -1342,6 +1401,7 @@ static int syslog_print_all(char __user
+@@ -1304,6 +1363,7 @@ static int syslog_print_all(char __user
  {
  	char *text;
  	int len = 0;
@@ -16881,10 +16881,10 @@
  
  	text = kmalloc(LOG_LINE_MAX + PREFIX_MAX, GFP_KERNEL);
  	if (!text)
-@@ -1353,6 +1413,14 @@ static int syslog_print_all(char __user
+@@ -1314,6 +1374,14 @@ static int syslog_print_all(char __user
+ 		u64 next_seq;
  		u64 seq;
  		u32 idx;
- 		enum log_flags prev;
 +		int num_msg;
 +try_again:
 +		attempts++;
@@ -16896,8 +16896,8 @@
  
  		/*
  		 * Find first record that fits, including all following records,
-@@ -1368,6 +1436,14 @@ static int syslog_print_all(char __user
- 			prev = msg->flags;
+@@ -1327,6 +1395,14 @@ static int syslog_print_all(char __user
+ 			len += msg_print_text(msg, true, NULL, 0);
  			idx = log_next(idx);
  			seq++;
 +			num_msg++;
@@ -16911,8 +16911,8 @@
  		}
  
  		/* move first record forward until length fits into the buffer */
-@@ -1381,6 +1457,14 @@ static int syslog_print_all(char __user
- 			prev = msg->flags;
+@@ -1338,6 +1414,14 @@ static int syslog_print_all(char __user
+ 			len -= msg_print_text(msg, true, NULL, 0);
  			idx = log_next(idx);
  			seq++;
 +			num_msg++;
@@ -16926,7 +16926,7 @@
  		}
  
  		/* last message fitting into this dump */
-@@ -1421,6 +1505,7 @@ static int syslog_print_all(char __user
+@@ -1376,6 +1460,7 @@ static int syslog_print_all(char __user
  		clear_seq = log_next_seq;
  		clear_idx = log_next_idx;
  	}
@@ -16934,7 +16934,7 @@
  	raw_spin_unlock_irq(&logbuf_lock);
  
  	kfree(text);
-@@ -1574,6 +1659,12 @@ static void call_console_drivers(int lev
+@@ -1526,6 +1611,12 @@ static void call_console_drivers(int lev
  	if (!console_drivers)
  		return;
  
@@ -16947,7 +16947,7 @@
  	for_each_console(con) {
  		if (exclusive_console && con != exclusive_console)
  			continue;
-@@ -1589,6 +1680,7 @@ static void call_console_drivers(int lev
+@@ -1541,6 +1632,7 @@ static void call_console_drivers(int lev
  		else
  			con->write(con, text, len);
  	}
@@ -16955,7 +16955,7 @@
  }
  
  /*
-@@ -1786,6 +1878,13 @@ asmlinkage int vprintk_emit(int facility
+@@ -1738,6 +1830,13 @@ asmlinkage int vprintk_emit(int facility
  	/* cpu currently holding logbuf_lock in this function */
  	static unsigned int logbuf_cpu = UINT_MAX;
  
@@ -16969,7 +16969,7 @@
  	if (level == LOGLEVEL_SCHED) {
  		level = LOGLEVEL_DEFAULT;
  		in_sched = true;
-@@ -1890,13 +1989,23 @@ asmlinkage int vprintk_emit(int facility
+@@ -1842,13 +1941,23 @@ asmlinkage int vprintk_emit(int facility
  
  	/* If called from the scheduler, we can not call up(). */
  	if (!in_sched) {
@@ -16994,7 +16994,7 @@
  			console_unlock();
  		lockdep_on();
  	}
-@@ -2019,26 +2128,6 @@ DEFINE_PER_CPU(printk_func_t, printk_fun
+@@ -1969,26 +2078,6 @@ DEFINE_PER_CPU(printk_func_t, printk_fun
  
  #endif /* CONFIG_PRINTK */
  
@@ -17021,7 +17021,7 @@
  static int __add_preferred_console(char *name, int idx, char *options,
  				   char *brl_options)
  {
-@@ -2308,11 +2397,16 @@ static void console_cont_flush(char *tex
+@@ -2258,11 +2347,16 @@ static void console_cont_flush(char *tex
  		goto out;
  
  	len = cont_print_text(text, size);
@@ -17038,10 +17038,10 @@
  	return;
  out:
  	raw_spin_unlock_irqrestore(&logbuf_lock, flags);
-@@ -2440,13 +2534,17 @@ skip:
+@@ -2386,13 +2480,17 @@ skip:
+ 		}
  		console_idx = log_next(console_idx);
  		console_seq++;
- 		console_prev = msg->flags;
 +#ifdef CONFIG_PREEMPT_RT_FULL
 +		raw_spin_unlock_irqrestore(&logbuf_lock, flags);
 +		call_console_drivers(level, ext_text, ext_len, text, len);
@@ -17057,7 +17057,7 @@
  		if (do_cond_resched)
  			cond_resched();
  	}
-@@ -2498,6 +2596,11 @@ void console_unblank(void)
+@@ -2444,6 +2542,11 @@ void console_unblank(void)
  {
  	struct console *c;
  
@@ -18877,7 +18877,7 @@
  	/*
  	 * Only set the backward buddy when the current task is still
  	 * on the rq. This can happen when a wakeup gets interleaved
-@@ -8655,7 +8655,7 @@ static void task_fork_fair(struct task_s
+@@ -8656,7 +8656,7 @@ static void task_fork_fair(struct task_s
  		 * 'current' within the tree based on its new key value.
  		 */
  		swap(curr->vruntime, se->vruntime);
@@ -18886,7 +18886,7 @@
  	}
  
  	se->vruntime -= cfs_rq->min_vruntime;
-@@ -8679,7 +8679,7 @@ prio_changed_fair(struct rq *rq, struct
+@@ -8680,7 +8680,7 @@ prio_changed_fair(struct rq *rq, struct
  	 */
  	if (rq->curr == p) {
  		if (p->prio > oldprio)
@@ -24645,7 +24645,7 @@
  	put_online_cpus();
  	mutex_unlock(&percpu_charge_mutex);
  }
-@@ -4584,12 +4587,12 @@ static int mem_cgroup_move_account(struc
+@@ -4594,12 +4597,12 @@ static int mem_cgroup_move_account(struc
  
  	ret = 0;
  
@@ -24660,7 +24660,7 @@
  out_unlock:
  	unlock_page(page);
  out:
-@@ -5464,10 +5467,10 @@ void mem_cgroup_commit_charge(struct pag
+@@ -5474,10 +5477,10 @@ void mem_cgroup_commit_charge(struct pag
  
  	commit_charge(page, memcg, lrucare);
  
@@ -24673,7 +24673,7 @@
  
  	if (do_memsw_account() && PageSwapCache(page)) {
  		swp_entry_t entry = { .val = page_private(page) };
-@@ -5523,14 +5526,14 @@ static void uncharge_batch(struct mem_cg
+@@ -5533,14 +5536,14 @@ static void uncharge_batch(struct mem_cg
  		memcg_oom_recover(memcg);
  	}
  
@@ -24690,7 +24690,7 @@
  
  	if (!mem_cgroup_is_root(memcg))
  		css_put_many(&memcg->css, nr_pages);
-@@ -5685,10 +5688,10 @@ void mem_cgroup_migrate(struct page *old
+@@ -5695,10 +5698,10 @@ void mem_cgroup_migrate(struct page *old
  
  	commit_charge(newpage, memcg, false);
  
@@ -24703,7 +24703,7 @@
  }
  
  DEFINE_STATIC_KEY_FALSE(memcg_sockets_enabled_key);
-@@ -5879,6 +5882,7 @@ void mem_cgroup_swapout(struct page *pag
+@@ -5889,6 +5892,7 @@ void mem_cgroup_swapout(struct page *pag
  {
  	struct mem_cgroup *memcg, *swap_memcg;
  	unsigned short oldid;
@@ -24711,7 +24711,7 @@
  
  	VM_BUG_ON_PAGE(PageLRU(page), page);
  	VM_BUG_ON_PAGE(page_count(page), page);
-@@ -5919,12 +5923,16 @@ void mem_cgroup_swapout(struct page *pag
+@@ -5929,12 +5933,16 @@ void mem_cgroup_swapout(struct page *pag
  	 * important here to have the interrupts disabled because it is the
  	 * only synchronisation we have for udpating the per-CPU variables.
  	 */
@@ -26624,7 +26624,7 @@
  	netdev_queue_numa_node_write(queue, NUMA_NO_NODE);
  	queue->dev = dev;
  #ifdef CONFIG_BQL
-@@ -8160,16 +8194,20 @@ static int dev_cpu_callback(struct notif
+@@ -8162,16 +8196,20 @@ static int dev_cpu_callback(struct notif
  
  	raise_softirq_irqoff(NET_TX_SOFTIRQ);
  	local_irq_enable();
@@ -26646,7 +26646,7 @@
  
  	return NOTIFY_OK;
  }
-@@ -8476,8 +8514,9 @@ static int __init net_dev_init(void)
+@@ -8478,8 +8516,9 @@ static int __init net_dev_init(void)
  
  		INIT_WORK(flush, flush_backlog);
  
@@ -26878,7 +26878,7 @@
  {
 --- a/net/core/sock.c
 +++ b/net/core/sock.c
-@@ -2500,12 +2500,11 @@ void lock_sock_nested(struct sock *sk, i
+@@ -2505,12 +2505,11 @@ void lock_sock_nested(struct sock *sk, i
  	if (sk->sk_lock.owned)
  		__lock_sock(sk);
  	sk->sk_lock.owned = 1;
@@ -27206,7 +27206,7 @@
  
  	sch->ops = ops;
  	sch->enqueue = ops->enqueue;
-@@ -786,7 +798,7 @@ void dev_deactivate_many(struct list_hea
+@@ -790,7 +802,7 @@ void dev_deactivate_many(struct list_hea
  	/* Wait for outstanding qdisc_run calls. */
  	list_for_each_entry(dev, head, close_list)
  		while (some_qdisc_is_busy(dev))
