@@ -30,25 +30,6 @@ define Build/elecom-wrc-factory
   mv $@.new $@
 endef
 
-define Build/elx-header
-  $(eval hw_id=$(word 1,$(1)))
-  $(eval xor_pattern=$(word 2,$(1)))
-  ( \
-    echo -ne "\x00\x00\x00\x00\x00\x00\x00\x03" | \
-      dd bs=42 count=1 conv=sync; \
-    hw_id="$(hw_id)"; \
-    echo -ne "\x$${hw_id:0:2}\x$${hw_id:2:2}\x$${hw_id:4:2}\x$${hw_id:6:2}" | \
-      dd bs=20 count=1 conv=sync; \
-    echo -ne "$$(printf '%08x' $$(stat -c%s $@) | fold -s2 | xargs -I {} echo \\x{} | tr -d '\n')" | \
-      dd bs=8 count=1 conv=sync; \
-    echo -ne "$$($(STAGING_DIR_HOST)/bin/mkhash md5 $@ | fold -s2 | xargs -I {} echo \\x{} | tr -d '\n')" | \
-      dd bs=58 count=1 conv=sync; \
-  ) > $(KDIR)/tmp/$(DEVICE_NAME).header
-  $(call Build/xor-image,-p $(xor_pattern) -x)
-  cat $(KDIR)/tmp/$(DEVICE_NAME).header $@ > $@.new
-  mv $@.new $@
-endef
-
 define Build/iodata-factory
   $(eval fw_size=$(word 1,$(1)))
   $(eval fw_type=$(word 2,$(1)))
@@ -341,6 +322,19 @@ define Device/iodata_wn-gx300gr
 endef
 TARGET_DEVICES += iodata_wn-gx300gr
 
+define Device/iodata_wnpr2600g
+  MTK_SOC := mt7621
+  DEVICE_VENDOR := I-O DATA
+  DEVICE_MODEL := WNPR2600G
+  IMAGE_SIZE := 13952k
+  IMAGES += factory.bin
+  IMAGE/factory.bin := \
+    $$(sysupgrade_bin) | check-size $$$$(IMAGE_SIZE) | \
+    elx-header 0104003a 8844A2D168B45A2D
+  DEVICE_PACKAGES := kmod-mt7615e wpad-basic
+endef
+TARGET_DEVICES += iodata_wnpr2600g
+
 define Device/lenovo_newifi-d1
   MTK_SOC := mt7621
   IMAGE_SIZE := 32448k
@@ -554,6 +548,8 @@ define Device/phicomm_k2p
   IMAGE_SIZE := 15744k
   DEVICE_VENDOR := Phicomm
   DEVICE_MODEL := K2P
+  DEVICE_ALT0_VENDOR := Phicomm
+  DEVICE_ALT0_MODEL := KE 2P
   SUPPORTED_DEVICES += k2p
   DEVICE_PACKAGES := kmod-mt7615e wpad-basic
 endef
@@ -768,6 +764,15 @@ define Device/xiaomi_mir3p
 endef
 TARGET_DEVICES += xiaomi_mir3p
 
+define Device/xiaoyu_xy-c5
+  MTK_SOC := mt7621
+  IMAGE_SIZE := 32448k
+  DEVICE_VENDOR := XiaoYu
+  DEVICE_MODEL := XY-C5
+  DEVICE_PACKAGES := kmod-ata-core kmod-ata-ahci kmod-usb3
+endef
+TARGET_DEVICES += xiaoyu_xy-c5
+
 define Device/xzwifi_creativebox-v1
   MTK_SOC := mt7621
   IMAGE_SIZE := 32448k
@@ -802,7 +807,7 @@ TARGET_DEVICES += youku_yk-l2
 define Device/zbtlink_zbt-we1326
   MTK_SOC := mt7621
   IMAGE_SIZE := 16064k
-  DEVICE_VENDOR := ZBT
+  DEVICE_VENDOR := Zbtlink
   DEVICE_MODEL := ZBT-WE1326
   DEVICE_PACKAGES := \
 	kmod-mt7603 kmod-mt76x2 kmod-usb3 kmod-sdhci-mt7620 wpad-basic
@@ -813,7 +818,7 @@ TARGET_DEVICES += zbtlink_zbt-we1326
 define Device/zbtlink_zbt-we3526
   MTK_SOC := mt7621
   IMAGE_SIZE := 16064k
-  DEVICE_VENDOR := ZBT
+  DEVICE_VENDOR := Zbtlink
   DEVICE_MODEL := ZBT-WE3526
   DEVICE_PACKAGES := \
 	kmod-sdhci-mt7620 kmod-mt7603 kmod-mt76x2 \
@@ -824,7 +829,7 @@ TARGET_DEVICES += zbtlink_zbt-we3526
 define Device/zbtlink_zbt-wg2626
   MTK_SOC := mt7621
   IMAGE_SIZE := 16064k
-  DEVICE_VENDOR := ZBT
+  DEVICE_VENDOR := Zbtlink
   DEVICE_MODEL := ZBT-WG2626
   DEVICE_PACKAGES := \
 	kmod-ata-core kmod-ata-ahci kmod-sdhci-mt7620 kmod-mt76x2 kmod-usb3 \
@@ -836,7 +841,7 @@ TARGET_DEVICES += zbtlink_zbt-wg2626
 define Device/zbtlink_zbt-wg3526-16m
   MTK_SOC := mt7621
   IMAGE_SIZE := 16064k
-  DEVICE_VENDOR := ZBT
+  DEVICE_VENDOR := Zbtlink
   DEVICE_MODEL := ZBT-WG3526
   DEVICE_VARIANT := 16M
   DEVICE_PACKAGES := \
@@ -849,7 +854,7 @@ TARGET_DEVICES += zbtlink_zbt-wg3526-16m
 define Device/zbtlink_zbt-wg3526-32m
   MTK_SOC := mt7621
   IMAGE_SIZE := 32448k
-  DEVICE_VENDOR := ZBT
+  DEVICE_VENDOR := Zbtlink
   DEVICE_MODEL := ZBT-WG3526
   DEVICE_VARIANT := 32M
   DEVICE_PACKAGES := \
