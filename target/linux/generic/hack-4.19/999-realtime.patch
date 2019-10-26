@@ -1,9 +1,9 @@
-4.19.72-rt25
+4.19.72-rt26
 
 --- /dev/null
 +++ b/source/localversion-rt
 @@ -0,0 +1 @@
-+-rt25
++-rt26
 --- a/arch/Kconfig
 +++ b/arch/Kconfig
 @@ -28,6 +28,7 @@ config OPROFILE
@@ -46,7 +46,7 @@
  	select HAVE_RCU_TABLE_FREE if (SMP && ARM_LPAE)
  	select HAVE_REGS_AND_STACK_ACCESS_API
  	select HAVE_RSEQ
-@@ -2163,7 +2164,7 @@ config NEON
+@@ -2164,7 +2165,7 @@ config NEON
  
  config KERNEL_MODE_NEON
  	bool "Support for NEON in kernel mode"
@@ -893,7 +893,7 @@
  }
 --- a/arch/arm64/Kconfig
 +++ b/arch/arm64/Kconfig
-@@ -140,6 +140,7 @@ config ARM64
+@@ -141,6 +141,7 @@ config ARM64
  	select HAVE_PERF_EVENTS
  	select HAVE_PERF_REGS
  	select HAVE_PERF_USER_STACK_DUMP
@@ -2795,7 +2795,7 @@
  	/*
 --- a/arch/x86/kvm/x86.c
 +++ b/arch/x86/kvm/x86.c
-@@ -6766,6 +6766,13 @@ int kvm_arch_init(void *opaque)
+@@ -6787,6 +6787,13 @@ int kvm_arch_init(void *opaque)
  		goto out;
  	}
  
@@ -2979,10 +2979,10 @@
  	percpu_ref_put(&q->q_usage_counter);
  }
  
-+static void blk_queue_usage_counter_release_swork(struct swork_event *sev)
++static void blk_queue_usage_counter_release_wrk(struct work_struct *work)
 +{
 +	struct request_queue *q =
-+		container_of(sev, struct request_queue, mq_pcpu_wake);
++		container_of(work, struct request_queue, mq_pcpu_wake);
 +
 +	wake_up_all(&q->mq_freeze_wq);
 +}
@@ -2994,7 +2994,7 @@
  
 -	wake_up_all(&q->mq_freeze_wq);
 +	if (wq_has_sleeper(&q->mq_freeze_wq))
-+		swork_queue(&q->mq_pcpu_wake);
++		schedule_work(&q->mq_pcpu_wake);
  }
  
  static void blk_rq_timed_out_timer(struct timer_list *t)
@@ -3002,19 +3002,10 @@
  	queue_flag_set_unlocked(QUEUE_FLAG_BYPASS, q);
  
  	init_waitqueue_head(&q->mq_freeze_wq);
-+	INIT_SWORK(&q->mq_pcpu_wake, blk_queue_usage_counter_release_swork);
++	INIT_WORK(&q->mq_pcpu_wake, blk_queue_usage_counter_release_wrk);
  
  	/*
  	 * Init percpu_ref in atomic mode so that it's faster to shutdown.
-@@ -3958,6 +3971,8 @@ int __init blk_dev_init(void)
- 	if (!kblockd_workqueue)
- 		panic("Failed to create kblockd\n");
- 
-+	BUG_ON(swork_get());
-+
- 	request_cachep = kmem_cache_create("blkdev_requests",
- 			sizeof(struct request), 0, SLAB_PANIC, NULL);
- 
 --- a/block/blk-ioc.c
 +++ b/block/blk-ioc.c
 @@ -9,6 +9,7 @@
@@ -3110,7 +3101,7 @@
  }
  
  static void hctx_unlock(struct blk_mq_hw_ctx *hctx, int srcu_idx)
-@@ -1368,14 +1391,14 @@ static void __blk_mq_delay_run_hw_queue(
+@@ -1371,14 +1394,14 @@ static void __blk_mq_delay_run_hw_queue(
  		return;
  
  	if (!async && !(hctx->flags & BLK_MQ_F_BLOCKING)) {
@@ -3128,7 +3119,7 @@
  	}
  
  	kblockd_mod_delayed_work_on(blk_mq_hctx_next_cpu(hctx), &hctx->run_work,
-@@ -3124,10 +3147,9 @@ static bool blk_mq_poll_hybrid_sleep(str
+@@ -3128,10 +3151,9 @@ static bool blk_mq_poll_hybrid_sleep(str
  	kt = nsecs;
  
  	mode = HRTIMER_MODE_REL;
@@ -3278,17 +3269,6 @@
  	return ret;
  }
  
---- a/drivers/block/loop.c
-+++ b/drivers/block/loop.c
-@@ -70,7 +70,7 @@
- #include <linux/writeback.h>
- #include <linux/completion.h>
- #include <linux/highmem.h>
--#include <linux/kthread.h>
-+#include <linux/kthread-cgroup.h>
- #include <linux/splice.h>
- #include <linux/sysfs.h>
- #include <linux/miscdevice.h>
 --- a/drivers/block/zram/zcomp.c
 +++ b/drivers/block/zram/zcomp.c
 @@ -116,12 +116,20 @@ ssize_t zcomp_available_show(const char
@@ -4871,7 +4851,7 @@
  }
  
  static void its_cpu_init_collection(struct its_node *its)
-@@ -3571,16 +3593,6 @@ static int redist_disable_lpis(void)
+@@ -3570,16 +3592,6 @@ static int redist_disable_lpis(void)
  	u64 timeout = USEC_PER_SEC;
  	u64 val;
  
@@ -4888,7 +4868,7 @@
  	if (!gic_rdists_supports_plpis()) {
  		pr_info("CPU%d: LPIs not supported\n", smp_processor_id());
  		return -ENXIO;
-@@ -3590,7 +3602,18 @@ static int redist_disable_lpis(void)
+@@ -3589,7 +3601,18 @@ static int redist_disable_lpis(void)
  	if (!(val & GICR_CTLR_ENABLE_LPIS))
  		return 0;
  
@@ -4908,7 +4888,7 @@
  		smp_processor_id());
  	add_taint(TAINT_CRAP, LOCKDEP_STILL_OK);
  
-@@ -3846,7 +3869,8 @@ int __init its_init(struct fwnode_handle
+@@ -3845,7 +3868,8 @@ int __init its_init(struct fwnode_handle
  	}
  
  	gic_rdists = rdists;
@@ -4940,7 +4920,7 @@
  	Allows a block device to be used as cache for other devices; uses
 --- a/drivers/md/dm-rq.c
 +++ b/drivers/md/dm-rq.c
-@@ -691,7 +691,6 @@ static void dm_old_request_fn(struct req
+@@ -692,7 +692,6 @@ static void dm_old_request_fn(struct req
  		/* Establish tio->ti before queuing work (map_tio_request) */
  		tio->ti = ti;
  		kthread_queue_work(&md->kworker, &tio->work);
@@ -4971,7 +4951,7 @@
  }
  
  static void free_stripe(struct kmem_cache *sc, struct stripe_head *sh)
-@@ -6811,6 +6813,7 @@ static int raid456_cpu_up_prepare(unsign
+@@ -6815,6 +6817,7 @@ static int raid456_cpu_up_prepare(unsign
  			__func__, cpu);
  		return -ENOMEM;
  	}
@@ -4979,7 +4959,7 @@
  	return 0;
  }
  
-@@ -6821,7 +6824,6 @@ static int raid5_alloc_percpu(struct r5c
+@@ -6825,7 +6828,6 @@ static int raid5_alloc_percpu(struct r5c
  	conf->percpu = alloc_percpu(struct raid5_percpu);
  	if (!conf->percpu)
  		return -ENOMEM;
@@ -5301,16 +5281,6 @@
  
  	/* peek cache of free slot */
  	if (pool->left != FC_XID_UNKNOWN) {
---- a/drivers/spi/spi-rockchip.c
-+++ b/drivers/spi/spi-rockchip.c
-@@ -22,6 +22,7 @@
- #include <linux/spi/spi.h>
- #include <linux/pm_runtime.h>
- #include <linux/scatterlist.h>
-+#include <linux/interrupt.h>
- 
- #define DRIVER_NAME "rockchip-spi"
- 
 --- a/drivers/staging/android/vsoc.c
 +++ b/drivers/staging/android/vsoc.c
 @@ -437,12 +437,10 @@ static int handle_vsoc_cond_wait(struct
@@ -5328,108 +5298,6 @@
  	}
  
  	while (1) {
---- a/drivers/thermal/x86_pkg_temp_thermal.c
-+++ b/drivers/thermal/x86_pkg_temp_thermal.c
-@@ -29,6 +29,7 @@
- #include <linux/pm.h>
- #include <linux/thermal.h>
- #include <linux/debugfs.h>
-+#include <linux/swork.h>
- #include <asm/cpu_device_id.h>
- #include <asm/mce.h>
- 
-@@ -329,7 +330,7 @@ static void pkg_thermal_schedule_work(in
- 	schedule_delayed_work_on(cpu, work, ms);
- }
- 
--static int pkg_thermal_notify(u64 msr_val)
-+static void pkg_thermal_notify_work(struct swork_event *event)
- {
- 	int cpu = smp_processor_id();
- 	struct pkg_device *pkgdev;
-@@ -348,9 +349,47 @@ static int pkg_thermal_notify(u64 msr_va
- 	}
- 
- 	spin_unlock_irqrestore(&pkg_temp_lock, flags);
-+}
-+
-+#ifdef CONFIG_PREEMPT_RT_FULL
-+static struct swork_event notify_work;
-+
-+static int pkg_thermal_notify_work_init(void)
-+{
-+	int err;
-+
-+	err = swork_get();
-+	if (err)
-+		return err;
-+
-+	INIT_SWORK(&notify_work, pkg_thermal_notify_work);
- 	return 0;
- }
- 
-+static void pkg_thermal_notify_work_cleanup(void)
-+{
-+	swork_put();
-+}
-+
-+static int pkg_thermal_notify(u64 msr_val)
-+{
-+	swork_queue(&notify_work);
-+	return 0;
-+}
-+
-+#else  /* !CONFIG_PREEMPT_RT_FULL */
-+
-+static int pkg_thermal_notify_work_init(void) { return 0; }
-+
-+static void pkg_thermal_notify_work_cleanup(void) {  }
-+
-+static int pkg_thermal_notify(u64 msr_val)
-+{
-+	pkg_thermal_notify_work(NULL);
-+	return 0;
-+}
-+#endif /* CONFIG_PREEMPT_RT_FULL */
-+
- static int pkg_temp_thermal_device_add(unsigned int cpu)
- {
- 	int pkgid = topology_logical_package_id(cpu);
-@@ -515,11 +554,16 @@ static int __init pkg_temp_thermal_init(
- 	if (!x86_match_cpu(pkg_temp_thermal_ids))
- 		return -ENODEV;
- 
-+	if (!pkg_thermal_notify_work_init())
-+		return -ENODEV;
-+
- 	max_packages = topology_max_packages();
- 	packages = kcalloc(max_packages, sizeof(struct pkg_device *),
- 			   GFP_KERNEL);
--	if (!packages)
--		return -ENOMEM;
-+	if (!packages) {
-+		ret = -ENOMEM;
-+		goto err;
-+	}
- 
- 	ret = cpuhp_setup_state(CPUHP_AP_ONLINE_DYN, "thermal/x86_pkg:online",
- 				pkg_thermal_cpu_online,	pkg_thermal_cpu_offline);
-@@ -537,6 +581,7 @@ static int __init pkg_temp_thermal_init(
- 	return 0;
- 
- err:
-+	pkg_thermal_notify_work_cleanup();
- 	kfree(packages);
- 	return ret;
- }
-@@ -550,6 +595,7 @@ static void __exit pkg_temp_thermal_exit
- 	cpuhp_remove_state(pkg_thermal_hp_state);
- 	debugfs_remove_recursive(debugfs);
- 	kfree(packages);
-+	pkg_thermal_notify_work_cleanup();
- }
- module_exit(pkg_temp_thermal_exit)
- 
 --- a/drivers/tty/serial/8250/8250_core.c
 +++ b/drivers/tty/serial/8250/8250_core.c
 @@ -54,7 +54,16 @@ static struct uart_driver serial8250_reg
@@ -5657,43 +5525,27 @@
  				wdd->id);
 --- a/fs/aio.c
 +++ b/fs/aio.c
-@@ -42,6 +42,7 @@
- #include <linux/ramfs.h>
- #include <linux/percpu-refcount.h>
- #include <linux/mount.h>
-+#include <linux/swork.h>
- 
- #include <asm/kmap_types.h>
- #include <linux/uaccess.h>
-@@ -121,6 +122,7 @@ struct kioctx {
+@@ -121,6 +121,7 @@ struct kioctx {
  	long			nr_pages;
  
  	struct rcu_work		free_rwork;	/* see free_ioctx() */
-+	struct swork_event	free_swork;	/* see free_ioctx() */
++	struct work_struct	free_work;	/* see free_ioctx() */
  
  	/*
  	 * signals when all in-flight requests are done
-@@ -265,6 +267,7 @@ static int __init aio_setup(void)
- 		.mount		= aio_mount,
- 		.kill_sb	= kill_anon_super,
- 	};
-+	BUG_ON(swork_get());
- 	aio_mnt = kern_mount(&aio_fs);
- 	if (IS_ERR(aio_mnt))
- 		panic("Failed to create aio fs mount.");
-@@ -606,9 +609,9 @@ static void free_ioctx_reqs(struct percp
+@@ -606,9 +607,9 @@ static void free_ioctx_reqs(struct percp
   * and ctx->users has dropped to 0, so we know no more kiocbs can be submitted -
   * now it's safe to cancel any that need to be.
   */
 -static void free_ioctx_users(struct percpu_ref *ref)
-+static void free_ioctx_users_work(struct swork_event *sev)
++static void free_ioctx_users_work(struct work_struct *work)
  {
 -	struct kioctx *ctx = container_of(ref, struct kioctx, users);
-+	struct kioctx *ctx = container_of(sev, struct kioctx, free_swork);
++	struct kioctx *ctx = container_of(work, struct kioctx, free_work);
  	struct aio_kiocb *req;
  
  	spin_lock_irq(&ctx->ctx_lock);
-@@ -626,6 +629,14 @@ static void free_ioctx_users(struct perc
+@@ -626,6 +627,14 @@ static void free_ioctx_users(struct perc
  	percpu_ref_put(&ctx->reqs);
  }
  
@@ -5701,8 +5553,8 @@
 +{
 +	struct kioctx *ctx = container_of(ref, struct kioctx, users);
 +
-+	INIT_SWORK(&ctx->free_swork, free_ioctx_users_work);
-+	swork_queue(&ctx->free_swork);
++	INIT_WORK(&ctx->free_work, free_ioctx_users_work);
++	schedule_work(&ctx->free_work);
 +}
 +
  static int ioctx_add_table(struct kioctx *ctx, struct mm_struct *mm)
@@ -6623,13 +6475,13 @@
   */
  
 -#include <linux/cgroup.h>
-+#include <linux/kthread-cgroup.h>
++#include <linux/kthread.h>
  #include <linux/percpu_counter.h>
  #include <linux/seq_file.h>
  #include <linux/radix-tree.h>
 --- a/include/linux/blk-mq.h
 +++ b/include/linux/blk-mq.h
-@@ -249,7 +249,7 @@ static inline u16 blk_mq_unique_tag_to_t
+@@ -256,7 +256,7 @@ static inline u16 blk_mq_unique_tag_to_t
  	return unique_tag & BLK_MQ_UNIQUE_TAG_MASK;
  }
  
@@ -6640,14 +6492,14 @@
  void blk_mq_end_request(struct request *rq, blk_status_t error);
 --- a/include/linux/blkdev.h
 +++ b/include/linux/blkdev.h
-@@ -27,6 +27,7 @@
- #include <linux/percpu-refcount.h>
- #include <linux/scatterlist.h>
- #include <linux/blkzoned.h>
-+#include <linux/swork.h>
- 
- struct module;
- struct scsi_ioctl_command;
+@@ -13,6 +13,7 @@
+ #include <linux/llist.h>
+ #include <linux/timer.h>
+ #include <linux/workqueue.h>
++#include <linux/kthread.h>
+ #include <linux/pagemap.h>
+ #include <linux/backing-dev-defs.h>
+ #include <linux/wait.h>
 @@ -149,6 +150,9 @@ enum mq_rq_state {
   */
  struct request {
@@ -6662,7 +6514,7 @@
  #endif
  	struct rcu_head		rcu_head;
  	wait_queue_head_t	mq_freeze_wq;
-+	struct swork_event	mq_pcpu_wake;
++	struct work_struct	mq_pcpu_wake;
  	struct percpu_ref	q_usage_counter;
  	struct list_head	all_q_node;
  
@@ -7090,15 +6942,7 @@
   * idr_for_each_entry() - Iterate over an IDR's elements of a given type.
 --- a/include/linux/interrupt.h
 +++ b/include/linux/interrupt.h
-@@ -13,6 +13,7 @@
- #include <linux/hrtimer.h>
- #include <linux/kref.h>
- #include <linux/workqueue.h>
-+#include <linux/kthread.h>
- 
- #include <linux/atomic.h>
- #include <asm/ptrace.h>
-@@ -61,6 +62,7 @@
+@@ -61,6 +61,7 @@
   *                interrupt handler after suspending interrupts. For system
   *                wakeup devices users need to implement wakeup detection in
   *                their interrupt handlers.
@@ -7106,7 +6950,7 @@
   */
  #define IRQF_SHARED		0x00000080
  #define IRQF_PROBE_SHARED	0x00000100
-@@ -74,6 +76,7 @@
+@@ -74,6 +75,7 @@
  #define IRQF_NO_THREAD		0x00010000
  #define IRQF_EARLY_RESUME	0x00020000
  #define IRQF_COND_SUSPEND	0x00040000
@@ -7114,19 +6958,7 @@
  
  #define IRQF_TIMER		(__IRQF_TIMER | IRQF_NO_SUSPEND | IRQF_NO_THREAD)
  
-@@ -236,7 +239,11 @@ extern void resume_device_irqs(void);
- struct irq_affinity_notify {
- 	unsigned int irq;
- 	struct kref kref;
-+#ifdef CONFIG_PREEMPT_RT_BASE
-+	struct kthread_work work;
-+#else
- 	struct work_struct work;
-+#endif
- 	void (*notify)(struct irq_affinity_notify *, const cpumask_t *mask);
- 	void (*release)(struct kref *ref);
- };
-@@ -427,7 +434,11 @@ extern int irq_set_irqchip_state(unsigne
+@@ -427,7 +429,11 @@ extern int irq_set_irqchip_state(unsigne
  				 bool state);
  
  #ifdef CONFIG_IRQ_FORCED_THREADING
@@ -7138,7 +6970,7 @@
  #else
  #define force_irqthreads	(0)
  #endif
-@@ -493,9 +504,10 @@ struct softirq_action
+@@ -493,9 +499,10 @@ struct softirq_action
  	void	(*action)(struct softirq_action *);
  };
  
@@ -7150,7 +6982,7 @@
  #ifdef __ARCH_HAS_DO_SOFTIRQ
  void do_softirq_own_stack(void);
  #else
-@@ -504,13 +516,25 @@ static inline void do_softirq_own_stack(
+@@ -504,13 +511,25 @@ static inline void do_softirq_own_stack(
  	__do_softirq();
  }
  #endif
@@ -7176,7 +7008,7 @@
  
  DECLARE_PER_CPU(struct task_struct *, ksoftirqd);
  
-@@ -532,8 +556,9 @@ static inline struct task_struct *this_c
+@@ -532,8 +551,9 @@ static inline struct task_struct *this_c
       to be executed on some cpu at least once after this.
     * If the tasklet is already scheduled, but its execution is still not
       started, it will be executed only once.
@@ -7188,7 +7020,7 @@
     * Tasklet is strictly serialized wrt itself, but not
       wrt another tasklets. If client needs some intertask synchronization,
       he makes it with spinlocks.
-@@ -558,27 +583,36 @@ struct tasklet_struct name = { NULL, 0,
+@@ -558,27 +578,36 @@ struct tasklet_struct name = { NULL, 0,
  enum
  {
  	TASKLET_STATE_SCHED,	/* Tasklet is scheduled for execution */
@@ -7231,7 +7063,7 @@
  #define tasklet_unlock_wait(t) do { } while (0)
  #define tasklet_unlock(t) do { } while (0)
  #endif
-@@ -612,17 +646,18 @@ static inline void tasklet_disable(struc
+@@ -612,17 +641,18 @@ static inline void tasklet_disable(struc
  	smp_mb();
  }
  
@@ -7460,37 +7292,9 @@
  # define sched_annotate_sleep() do { } while (0)
  #endif
  
---- /dev/null
-+++ b/include/linux/kthread-cgroup.h
-@@ -0,0 +1,17 @@
-+/* SPDX-License-Identifier: GPL-2.0 */
-+#ifndef _LINUX_KTHREAD_CGROUP_H
-+#define _LINUX_KTHREAD_CGROUP_H
-+#include <linux/kthread.h>
-+#include <linux/cgroup.h>
-+
-+#ifdef CONFIG_BLK_CGROUP
-+void kthread_associate_blkcg(struct cgroup_subsys_state *css);
-+struct cgroup_subsys_state *kthread_blkcg(void);
-+#else
-+static inline void kthread_associate_blkcg(struct cgroup_subsys_state *css) { }
-+static inline struct cgroup_subsys_state *kthread_blkcg(void)
-+{
-+	return NULL;
-+}
-+#endif
-+#endif
 --- a/include/linux/kthread.h
 +++ b/include/linux/kthread.h
-@@ -4,7 +4,6 @@
- /* Simple interface for creating and stopping kernel threads without mess. */
- #include <linux/err.h>
- #include <linux/sched.h>
--#include <linux/cgroup.h>
- 
- __printf(4, 5)
- struct task_struct *kthread_create_on_node(int (*threadfn)(void *data),
-@@ -85,7 +84,7 @@ enum {
+@@ -85,7 +85,7 @@ enum {
  
  struct kthread_worker {
  	unsigned int		flags;
@@ -7499,7 +7303,7 @@
  	struct list_head	work_list;
  	struct list_head	delayed_work_list;
  	struct task_struct	*task;
-@@ -106,7 +105,7 @@ struct kthread_delayed_work {
+@@ -106,7 +106,7 @@ struct kthread_delayed_work {
  };
  
  #define KTHREAD_WORKER_INIT(worker)	{				\
@@ -7508,27 +7312,6 @@
  	.work_list = LIST_HEAD_INIT((worker).work_list),		\
  	.delayed_work_list = LIST_HEAD_INIT((worker).delayed_work_list),\
  	}
-@@ -198,14 +197,12 @@ bool kthread_cancel_delayed_work_sync(st
- 
- void kthread_destroy_worker(struct kthread_worker *worker);
- 
--#ifdef CONFIG_BLK_CGROUP
--void kthread_associate_blkcg(struct cgroup_subsys_state *css);
--struct cgroup_subsys_state *kthread_blkcg(void);
--#else
--static inline void kthread_associate_blkcg(struct cgroup_subsys_state *css) { }
--static inline struct cgroup_subsys_state *kthread_blkcg(void)
-+extern struct kthread_worker kthread_global_worker;
-+void kthread_init_global_worker(void);
-+
-+static inline bool kthread_schedule_work(struct kthread_work *work)
- {
--	return NULL;
-+	return kthread_queue_work(&kthread_global_worker, work);
- }
--#endif
-+
- #endif /* _LINUX_KTHREAD_H */
 --- a/include/linux/list_bl.h
 +++ b/include/linux/list_bl.h
 @@ -3,6 +3,7 @@
@@ -10312,6 +10095,25 @@
  extern void prepare_to_swait_exclusive(struct swait_queue_head *q, struct swait_queue *wait, int state);
  extern long prepare_to_swait_event(struct swait_queue_head *q, struct swait_queue *wait, int state);
  
+@@ -297,4 +299,18 @@ do {									\
+ 	__ret;								\
+ })
+ 
++#define __swait_event_lock_irq(wq, condition, lock, cmd)		\
++	___swait_event(wq, condition, TASK_UNINTERRUPTIBLE, 0,		\
++		       raw_spin_unlock_irq(&lock);			\
++		       cmd;						\
++		       schedule();					\
++		       raw_spin_lock_irq(&lock))
++
++#define swait_event_lock_irq(wq_head, condition, lock)			\
++	do {								\
++		if (condition)						\
++			break;						\
++		__swait_event_lock_irq(wq_head, condition, lock, );	\
++	} while (0)
++
+ #endif /* _LINUX_SWAIT_H */
 --- a/include/linux/swap.h
 +++ b/include/linux/swap.h
 @@ -12,6 +12,7 @@
@@ -10462,6 +10264,19 @@
  	if ((timeout) != KTIME_MAX)						\
  		hrtimer_start_range_ns(&__t.timer, timeout,			\
  				       current->timer_slack_ns,			\
+--- a/include/linux/workqueue.h
++++ b/include/linux/workqueue.h
+@@ -455,10 +455,6 @@ __alloc_workqueue_key(const char *fmt, u
+ 
+ extern void destroy_workqueue(struct workqueue_struct *wq);
+ 
+-struct workqueue_attrs *alloc_workqueue_attrs(gfp_t gfp_mask);
+-void free_workqueue_attrs(struct workqueue_attrs *attrs);
+-int apply_workqueue_attrs(struct workqueue_struct *wq,
+-			  const struct workqueue_attrs *attrs);
+ int workqueue_set_unbound_cpumask(cpumask_var_t cpumask);
+ 
+ extern bool queue_work_on(int cpu, struct workqueue_struct *wq,
 --- a/include/net/gen_stats.h
 +++ b/include/net/gen_stats.h
 @@ -6,6 +6,7 @@
@@ -10888,14 +10703,6 @@
 +	softirq_early_init();
  	smp_prepare_boot_cpu();	/* arch-specific boot-cpu hooks */
  	boot_cpu_hotplug_init();
- 
-@@ -1153,6 +1154,7 @@ static noinline void __init kernel_init_
- 	smp_prepare_cpus(setup_max_cpus);
- 
- 	workqueue_init();
-+	kthread_init_global_worker();
- 
- 	init_mm_internals();
  
 --- a/kernel/Kconfig.locks
 +++ b/kernel/Kconfig.locks
@@ -12104,82 +11911,7 @@
  #endif
  
  static void __synchronize_hardirq(struct irq_desc *desc, bool sync_chip)
-@@ -283,7 +285,12 @@ int irq_set_affinity_locked(struct irq_d
- 
- 	if (desc->affinity_notify) {
- 		kref_get(&desc->affinity_notify->kref);
-+
-+#ifdef CONFIG_PREEMPT_RT_BASE
-+		kthread_schedule_work(&desc->affinity_notify->work);
-+#else
- 		schedule_work(&desc->affinity_notify->work);
-+#endif
- 	}
- 	irqd_set(data, IRQD_AFFINITY_SET);
- 
-@@ -321,10 +328,8 @@ int irq_set_affinity_hint(unsigned int i
- }
- EXPORT_SYMBOL_GPL(irq_set_affinity_hint);
- 
--static void irq_affinity_notify(struct work_struct *work)
-+static void _irq_affinity_notify(struct irq_affinity_notify *notify)
- {
--	struct irq_affinity_notify *notify =
--		container_of(work, struct irq_affinity_notify, work);
- 	struct irq_desc *desc = irq_to_desc(notify->irq);
- 	cpumask_var_t cpumask;
- 	unsigned long flags;
-@@ -346,6 +351,25 @@ out:
- 	kref_put(&notify->kref, notify->release);
- }
- 
-+#ifdef CONFIG_PREEMPT_RT_BASE
-+
-+static void irq_affinity_notify(struct kthread_work *work)
-+{
-+	struct irq_affinity_notify *notify =
-+		container_of(work, struct irq_affinity_notify, work);
-+	_irq_affinity_notify(notify);
-+}
-+
-+#else
-+
-+static void irq_affinity_notify(struct work_struct *work)
-+{
-+	struct irq_affinity_notify *notify =
-+		container_of(work, struct irq_affinity_notify, work);
-+	_irq_affinity_notify(notify);
-+}
-+#endif
-+
- /**
-  *	irq_set_affinity_notifier - control notification of IRQ affinity changes
-  *	@irq:		Interrupt for which to enable/disable notification
-@@ -374,7 +398,11 @@ irq_set_affinity_notifier(unsigned int i
- 	if (notify) {
- 		notify->irq = irq;
- 		kref_init(&notify->kref);
-+#ifdef CONFIG_PREEMPT_RT_BASE
-+		kthread_init_work(&notify->work, irq_affinity_notify);
-+#else
- 		INIT_WORK(&notify->work, irq_affinity_notify);
-+#endif
- 	}
- 
- 	raw_spin_lock_irqsave(&desc->lock, flags);
-@@ -383,7 +411,11 @@ irq_set_affinity_notifier(unsigned int i
- 	raw_spin_unlock_irqrestore(&desc->lock, flags);
- 
- 	if (old_notify) {
-+#ifdef CONFIG_PREEMPT_RT_BASE
-+		kthread_cancel_work_sync(&notify->work);
-+#else
- 		cancel_work_sync(&old_notify->work);
-+#endif
- 		kref_put(&old_notify->kref, old_notify->release);
- 	}
- 
-@@ -962,7 +994,15 @@ irq_forced_thread_fn(struct irq_desc *de
+@@ -962,7 +964,15 @@ irq_forced_thread_fn(struct irq_desc *de
  		atomic_inc(&desc->threads_handled);
  
  	irq_finalize_oneshot(desc, action);
@@ -12196,7 +11928,7 @@
  	return ret;
  }
  
-@@ -1060,6 +1100,12 @@ static int irq_thread(void *data)
+@@ -1060,6 +1070,12 @@ static int irq_thread(void *data)
  		if (action_ret == IRQ_WAKE_THREAD)
  			irq_wake_secondary(desc, action);
  
@@ -12209,7 +11941,7 @@
  		wake_threads_waitq(desc);
  	}
  
-@@ -1472,6 +1518,9 @@ __setup_irq(unsigned int irq, struct irq
+@@ -1472,6 +1488,9 @@ __setup_irq(unsigned int irq, struct irq
  			irqd_set(&desc->irq_data, IRQD_NO_BALANCING);
  		}
  
@@ -12219,7 +11951,7 @@
  		if (irq_settings_can_autoenable(desc)) {
  			irq_startup(desc, IRQ_RESEND, IRQ_START_COND);
  		} else {
-@@ -2277,7 +2326,7 @@ EXPORT_SYMBOL_GPL(irq_get_irqchip_state)
+@@ -2277,7 +2296,7 @@ EXPORT_SYMBOL_GPL(irq_get_irqchip_state)
   *	This call sets the internal irqchip state of an interrupt,
   *	depending on the value of @which.
   *
@@ -12470,15 +12202,7 @@
  
 --- a/kernel/kthread.c
 +++ b/kernel/kthread.c
-@@ -20,6 +20,7 @@
- #include <linux/freezer.h>
- #include <linux/ptrace.h>
- #include <linux/uaccess.h>
-+#include <linux/cgroup.h>
- #include <trace/events/sched.h>
- 
- static DEFINE_SPINLOCK(kthread_create_lock);
-@@ -599,7 +600,7 @@ void __kthread_init_worker(struct kthrea
+@@ -599,7 +599,7 @@ void __kthread_init_worker(struct kthrea
  				struct lock_class_key *key)
  {
  	memset(worker, 0, sizeof(struct kthread_worker));
@@ -12487,7 +12211,7 @@
  	lockdep_set_class_and_name(&worker->lock, key, name);
  	INIT_LIST_HEAD(&worker->work_list);
  	INIT_LIST_HEAD(&worker->delayed_work_list);
-@@ -641,21 +642,21 @@ repeat:
+@@ -641,21 +641,21 @@ repeat:
  
  	if (kthread_should_stop()) {
  		__set_current_state(TASK_RUNNING);
@@ -12513,7 +12237,7 @@
  
  	if (work) {
  		__set_current_state(TASK_RUNNING);
-@@ -812,12 +813,12 @@ bool kthread_queue_work(struct kthread_w
+@@ -812,12 +812,12 @@ bool kthread_queue_work(struct kthread_w
  	bool ret = false;
  	unsigned long flags;
  
@@ -12528,7 +12252,7 @@
  	return ret;
  }
  EXPORT_SYMBOL_GPL(kthread_queue_work);
-@@ -843,7 +844,7 @@ void kthread_delayed_work_timer_fn(struc
+@@ -843,7 +843,7 @@ void kthread_delayed_work_timer_fn(struc
  	if (WARN_ON_ONCE(!worker))
  		return;
  
@@ -12537,7 +12261,7 @@
  	/* Work must not be used with >1 worker, see kthread_queue_work(). */
  	WARN_ON_ONCE(work->worker != worker);
  
-@@ -852,7 +853,7 @@ void kthread_delayed_work_timer_fn(struc
+@@ -852,7 +852,7 @@ void kthread_delayed_work_timer_fn(struc
  	list_del_init(&work->node);
  	kthread_insert_work(worker, work, &worker->work_list);
  
@@ -12546,7 +12270,7 @@
  }
  EXPORT_SYMBOL(kthread_delayed_work_timer_fn);
  
-@@ -908,14 +909,14 @@ bool kthread_queue_delayed_work(struct k
+@@ -908,14 +908,14 @@ bool kthread_queue_delayed_work(struct k
  	unsigned long flags;
  	bool ret = false;
  
@@ -12563,7 +12287,7 @@
  	return ret;
  }
  EXPORT_SYMBOL_GPL(kthread_queue_delayed_work);
-@@ -951,7 +952,7 @@ void kthread_flush_work(struct kthread_w
+@@ -951,7 +951,7 @@ void kthread_flush_work(struct kthread_w
  	if (!worker)
  		return;
  
@@ -12572,7 +12296,7 @@
  	/* Work must not be used with >1 worker, see kthread_queue_work(). */
  	WARN_ON_ONCE(work->worker != worker);
  
-@@ -963,7 +964,7 @@ void kthread_flush_work(struct kthread_w
+@@ -963,7 +963,7 @@ void kthread_flush_work(struct kthread_w
  	else
  		noop = true;
  
@@ -12581,7 +12305,7 @@
  
  	if (!noop)
  		wait_for_completion(&fwork.done);
-@@ -996,9 +997,9 @@ static bool __kthread_cancel_work(struct
+@@ -996,9 +996,9 @@ static bool __kthread_cancel_work(struct
  		 * any queuing is blocked by setting the canceling counter.
  		 */
  		work->canceling++;
@@ -12593,7 +12317,7 @@
  		work->canceling--;
  	}
  
-@@ -1045,7 +1046,7 @@ bool kthread_mod_delayed_work(struct kth
+@@ -1045,7 +1045,7 @@ bool kthread_mod_delayed_work(struct kth
  	unsigned long flags;
  	int ret = false;
  
@@ -12602,7 +12326,7 @@
  
  	/* Do not bother with canceling when never queued. */
  	if (!work->worker)
-@@ -1062,7 +1063,7 @@ bool kthread_mod_delayed_work(struct kth
+@@ -1062,7 +1062,7 @@ bool kthread_mod_delayed_work(struct kth
  fast_queue:
  	__kthread_queue_delayed_work(worker, dwork, delay);
  out:
@@ -12611,7 +12335,7 @@
  	return ret;
  }
  EXPORT_SYMBOL_GPL(kthread_mod_delayed_work);
-@@ -1076,7 +1077,7 @@ static bool __kthread_cancel_work_sync(s
+@@ -1076,7 +1076,7 @@ static bool __kthread_cancel_work_sync(s
  	if (!worker)
  		goto out;
  
@@ -12620,7 +12344,7 @@
  	/* Work must not be used with >1 worker, see kthread_queue_work(). */
  	WARN_ON_ONCE(work->worker != worker);
  
-@@ -1090,13 +1091,13 @@ static bool __kthread_cancel_work_sync(s
+@@ -1090,13 +1090,13 @@ static bool __kthread_cancel_work_sync(s
  	 * In the meantime, block any queuing by setting the canceling counter.
  	 */
  	work->canceling++;
@@ -12637,26 +12361,6 @@
  out:
  	return ret;
  }
-@@ -1180,6 +1181,19 @@ void kthread_destroy_worker(struct kthre
- }
- EXPORT_SYMBOL(kthread_destroy_worker);
- 
-+DEFINE_KTHREAD_WORKER(kthread_global_worker);
-+EXPORT_SYMBOL(kthread_global_worker);
-+
-+__init void kthread_init_global_worker(void)
-+{
-+	kthread_global_worker.task = kthread_create(kthread_worker_fn,
-+						    &kthread_global_worker,
-+						    "kswork");
-+	if (WARN_ON(IS_ERR(kthread_global_worker.task)))
-+		return;
-+	wake_up_process(kthread_global_worker.task);
-+}
-+
- #ifdef CONFIG_BLK_CGROUP
- /**
-  * kthread_associate_blkcg - associate blkcg to current kthread
 --- a/kernel/locking/Makefile
 +++ b/kernel/locking/Makefile
 @@ -3,7 +3,7 @@
@@ -12694,7 +12398,7 @@
  obj-$(CONFIG_WW_MUTEX_SELFTEST) += test-ww_mutex.o
 --- a/kernel/locking/lockdep.c
 +++ b/kernel/locking/lockdep.c
-@@ -3823,6 +3823,7 @@ static void check_flags(unsigned long fl
+@@ -3826,6 +3826,7 @@ static void check_flags(unsigned long fl
  		}
  	}
  
@@ -12702,7 +12406,7 @@
  	/*
  	 * We dont accurately track softirq state in e.g.
  	 * hardirq contexts (such as on 4KSTACKS), so only
-@@ -3837,6 +3838,7 @@ static void check_flags(unsigned long fl
+@@ -3840,6 +3841,7 @@ static void check_flags(unsigned long fl
  			DEBUG_LOCKS_WARN_ON(!current->softirqs_enabled);
  		}
  	}
@@ -16478,8 +16182,8 @@
 +	if (cpumask_equal(p->cpus_ptr, new_mask))
  		goto out;
  
- 	if (!cpumask_intersects(new_mask, cpu_valid_mask)) {
-@@ -1095,8 +1178,15 @@ static int __set_cpus_allowed_ptr(struct
+ 	dest_cpu = cpumask_any_and(cpu_valid_mask, new_mask);
+@@ -1096,8 +1179,15 @@ static int __set_cpus_allowed_ptr(struct
  	}
  
  	/* Can the task run on the task's current CPU? If so, we're done */
@@ -16494,8 +16198,8 @@
 +	}
 +#endif
  
- 	dest_cpu = cpumask_any_and(cpu_valid_mask, new_mask);
  	if (task_running(rq, p) || p->state == TASK_WAKING) {
+ 		struct migration_arg arg = { p, dest_cpu };
 @@ -1237,10 +1327,10 @@ static int migrate_swap_stop(void *data)
  	if (task_cpu(arg->src_task) != arg->src_cpu)
  		goto unlock;
@@ -16773,7 +16477,7 @@
  		put_task_struct(prev);
  	}
  
-@@ -3429,25 +3507,13 @@ static void __sched notrace __schedule(b
+@@ -3470,25 +3548,13 @@ static void __sched notrace __schedule(b
  				atomic_inc(&rq->nr_iowait);
  				delayacct_blkio_start();
  			}
@@ -16800,13 +16504,14 @@
  	clear_preempt_need_resched();
  
  	if (likely(prev != next)) {
-@@ -3499,8 +3565,24 @@ void __noreturn do_task_dead(void)
+@@ -3540,8 +3606,25 @@ void __noreturn do_task_dead(void)
  
  static inline void sched_submit_work(struct task_struct *tsk)
  {
 -	if (!tsk->state || tsk_is_pi_blocked(tsk))
 +	if (!tsk->state)
 +		return;
++
 +	/*
 +	 * If a worker went to sleep, notify and ask workqueue whether
 +	 * it wants to wake up a task to maintain concurrency.
@@ -16826,7 +16531,7 @@
  	/*
  	 * If we are going to sleep and we have plugged IO queued,
  	 * make sure to submit it to avoid deadlocks.
-@@ -3509,6 +3591,12 @@ static inline void sched_submit_work(str
+@@ -3550,6 +3633,12 @@ static inline void sched_submit_work(str
  		blk_schedule_flush_plug(tsk);
  }
  
@@ -16839,7 +16544,7 @@
  asmlinkage __visible void __sched schedule(void)
  {
  	struct task_struct *tsk = current;
-@@ -3519,6 +3607,7 @@ asmlinkage __visible void __sched schedu
+@@ -3560,6 +3649,7 @@ asmlinkage __visible void __sched schedu
  		__schedule(false);
  		sched_preempt_enable_no_resched();
  	} while (need_resched());
@@ -16847,7 +16552,7 @@
  }
  EXPORT_SYMBOL(schedule);
  
-@@ -3607,6 +3696,30 @@ static void __sched notrace preempt_sche
+@@ -3648,6 +3738,30 @@ static void __sched notrace preempt_sche
  	} while (need_resched());
  }
  
@@ -16878,7 +16583,7 @@
  #ifdef CONFIG_PREEMPT
  /*
   * this is the entry point to schedule() from in-kernel preemption
-@@ -3621,7 +3734,8 @@ asmlinkage __visible void __sched notrac
+@@ -3662,7 +3776,8 @@ asmlinkage __visible void __sched notrac
  	 */
  	if (likely(!preemptible()))
  		return;
@@ -16888,7 +16593,7 @@
  	preempt_schedule_common();
  }
  NOKPROBE_SYMBOL(preempt_schedule);
-@@ -3648,6 +3762,9 @@ asmlinkage __visible void __sched notrac
+@@ -3689,6 +3804,9 @@ asmlinkage __visible void __sched notrac
  	if (likely(!preemptible()))
  		return;
  
@@ -16898,7 +16603,7 @@
  	do {
  		/*
  		 * Because the function tracer can trace preempt_count_sub()
-@@ -4276,7 +4393,7 @@ change:
+@@ -4317,7 +4435,7 @@ change:
  			 * the entire root_domain to become SCHED_DEADLINE. We
  			 * will also fail if there's no bandwidth available.
  			 */
@@ -16907,7 +16612,7 @@
  			    rq->rd->dl_bw.bw == 0) {
  				task_rq_unlock(rq, p, &rf);
  				return -EPERM;
-@@ -4875,7 +4992,7 @@ long sched_getaffinity(pid_t pid, struct
+@@ -4916,7 +5034,7 @@ long sched_getaffinity(pid_t pid, struct
  		goto out_unlock;
  
  	raw_spin_lock_irqsave(&p->pi_lock, flags);
@@ -16916,7 +16621,7 @@
  	raw_spin_unlock_irqrestore(&p->pi_lock, flags);
  
  out_unlock:
-@@ -5416,7 +5533,9 @@ void init_idle(struct task_struct *idle,
+@@ -5457,7 +5575,9 @@ void init_idle(struct task_struct *idle,
  
  	/* Set the preempt count _outside_ the spinlocks! */
  	init_idle_preempt_count(idle, cpu);
@@ -16927,7 +16632,7 @@
  	/*
  	 * The idle tasks have their own, simple scheduling class:
  	 */
-@@ -5455,7 +5574,7 @@ int task_can_attach(struct task_struct *
+@@ -5496,7 +5616,7 @@ int task_can_attach(struct task_struct *
  	 * allowed nodes is unnecessary.  Thus, cpusets are not
  	 * applicable for such threads.  This prevents checking for
  	 * success of set_cpus_allowed_ptr() on all attached tasks
@@ -16936,7 +16641,7 @@
  	 */
  	if (p->flags & PF_NO_SETAFFINITY) {
  		ret = -EINVAL;
-@@ -5482,7 +5601,7 @@ int migrate_task_to(struct task_struct *
+@@ -5523,7 +5643,7 @@ int migrate_task_to(struct task_struct *
  	if (curr_cpu == target_cpu)
  		return 0;
  
@@ -16945,7 +16650,7 @@
  		return -EINVAL;
  
  	/* TODO: This is not properly updating schedstats */
-@@ -5521,6 +5640,8 @@ void sched_setnuma(struct task_struct *p
+@@ -5562,6 +5682,8 @@ void sched_setnuma(struct task_struct *p
  #endif /* CONFIG_NUMA_BALANCING */
  
  #ifdef CONFIG_HOTPLUG_CPU
@@ -16954,7 +16659,7 @@
  /*
   * Ensure that the idle task is using init_mm right before its CPU goes
   * offline.
-@@ -5536,7 +5657,11 @@ void idle_task_exit(void)
+@@ -5577,7 +5699,11 @@ void idle_task_exit(void)
  		current->active_mm = &init_mm;
  		finish_arch_post_lock_switch();
  	}
@@ -16967,7 +16672,7 @@
  }
  
  /*
-@@ -5620,7 +5745,7 @@ static void migrate_tasks(struct rq *dea
+@@ -5661,7 +5787,7 @@ static void migrate_tasks(struct rq *dea
  		put_prev_task(rq, next);
  
  		/*
@@ -16976,7 +16681,7 @@
  		 * both pi_lock and rq->lock, such that holding either
  		 * stabilizes the mask.
  		 *
-@@ -5848,6 +5973,10 @@ int sched_cpu_dying(unsigned int cpu)
+@@ -5889,6 +6015,10 @@ int sched_cpu_dying(unsigned int cpu)
  	update_max_interval();
  	nohz_balance_exit_idle(rq);
  	hrtick_clear(rq);
@@ -16987,7 +16692,7 @@
  	return 0;
  }
  #endif
-@@ -6082,7 +6211,7 @@ void __init sched_init(void)
+@@ -6123,7 +6253,7 @@ void __init sched_init(void)
  #ifdef CONFIG_DEBUG_ATOMIC_SLEEP
  static inline int preempt_count_equals(int preempt_offset)
  {
@@ -16996,7 +16701,7 @@
  
  	return (nested == preempt_offset);
  }
-@@ -7068,3 +7197,196 @@ const u32 sched_prio_to_wmult[40] = {
+@@ -7105,3 +7235,196 @@ const u32 sched_prio_to_wmult[40] = {
  };
  
  #undef CREATE_TRACE_POINTS
@@ -17230,7 +16935,7 @@
  			 * We have to ensure that we have at least one bit
 --- a/kernel/sched/deadline.c
 +++ b/kernel/sched/deadline.c
-@@ -538,7 +538,7 @@ static struct rq *dl_task_offline_migrat
+@@ -539,7 +539,7 @@ static struct rq *dl_task_offline_migrat
  		 * If we cannot preempt any rq, fall back to pick any
  		 * online CPU:
  		 */
@@ -17239,7 +16944,7 @@
  		if (cpu >= nr_cpu_ids) {
  			/*
  			 * Failed to find any suitable CPU.
-@@ -1053,7 +1053,7 @@ void init_dl_task_timer(struct sched_dl_
+@@ -1086,7 +1086,7 @@ void init_dl_task_timer(struct sched_dl_
  {
  	struct hrtimer *timer = &dl_se->dl_timer;
  
@@ -17248,7 +16953,7 @@
  	timer->function = dl_task_timer;
  }
  
-@@ -1823,7 +1823,7 @@ static void set_curr_task_dl(struct rq *
+@@ -1856,7 +1856,7 @@ static void set_curr_task_dl(struct rq *
  static int pick_dl_task(struct rq *rq, struct task_struct *p, int cpu)
  {
  	if (!task_running(rq, p) &&
@@ -17257,7 +16962,7 @@
  		return 1;
  	return 0;
  }
-@@ -1973,7 +1973,7 @@ static struct rq *find_lock_later_rq(str
+@@ -2006,7 +2006,7 @@ static struct rq *find_lock_later_rq(str
  		/* Retry if something changed. */
  		if (double_lock_balance(rq, later_rq)) {
  			if (unlikely(task_rq(task) != rq ||
@@ -17591,7 +17296,7 @@
  				raw_spin_unlock_irqrestore(&busiest->lock,
  							    flags);
  				env.flags |= LBF_ALL_PINNED;
-@@ -9791,7 +9793,7 @@ static void task_fork_fair(struct task_s
+@@ -9792,7 +9794,7 @@ static void task_fork_fair(struct task_s
  		 * 'current' within the tree based on its new key value.
  		 */
  		swap(curr->vruntime, se->vruntime);
@@ -17600,7 +17305,7 @@
  	}
  
  	se->vruntime -= cfs_rq->min_vruntime;
-@@ -9815,7 +9817,7 @@ prio_changed_fair(struct rq *rq, struct
+@@ -9816,7 +9818,7 @@ prio_changed_fair(struct rq *rq, struct
  	 */
  	if (rq->curr == p) {
  		if (p->prio > oldprio)
@@ -19039,45 +18744,7 @@
  EXPORT_SYMBOL_GPL(alarm_cancel);
 --- a/kernel/time/hrtimer.c
 +++ b/kernel/time/hrtimer.c
-@@ -730,6 +730,29 @@ static void hrtimer_switch_to_hres(void)
- 	retrigger_next_event(NULL);
- }
- 
-+#ifdef CONFIG_PREEMPT_RT_FULL
-+
-+static struct swork_event clock_set_delay_work;
-+
-+static void run_clock_set_delay(struct swork_event *event)
-+{
-+	clock_was_set();
-+}
-+
-+void clock_was_set_delayed(void)
-+{
-+	swork_queue(&clock_set_delay_work);
-+}
-+
-+static __init int create_clock_set_delay_thread(void)
-+{
-+	WARN_ON(swork_get());
-+	INIT_SWORK(&clock_set_delay_work, run_clock_set_delay);
-+	return 0;
-+}
-+early_initcall(create_clock_set_delay_thread);
-+#else /* PREEMPT_RT_FULL */
-+
- static void clock_was_set_work(struct work_struct *work)
- {
- 	clock_was_set();
-@@ -745,6 +768,7 @@ void clock_was_set_delayed(void)
- {
- 	schedule_work(&hrtimer_work);
- }
-+#endif
- 
- #else
- 
-@@ -939,6 +963,16 @@ u64 hrtimer_forward(struct hrtimer *time
+@@ -939,6 +939,16 @@ u64 hrtimer_forward(struct hrtimer *time
  }
  EXPORT_SYMBOL_GPL(hrtimer_forward);
  
@@ -19094,7 +18761,7 @@
  /*
   * enqueue_hrtimer - internal function to (re)start a timer
   *
-@@ -1108,7 +1142,9 @@ void hrtimer_start_range_ns(struct hrtim
+@@ -1108,7 +1118,9 @@ void hrtimer_start_range_ns(struct hrtim
  	 * Check whether the HRTIMER_MODE_SOFT bit and hrtimer.is_soft
  	 * match.
  	 */
@@ -19104,7 +18771,7 @@
  
  	base = lock_hrtimer_base(timer, &flags);
  
-@@ -1171,7 +1207,7 @@ int hrtimer_cancel(struct hrtimer *timer
+@@ -1171,7 +1183,7 @@ int hrtimer_cancel(struct hrtimer *timer
  
  		if (ret >= 0)
  			return ret;
@@ -19113,7 +18780,7 @@
  	}
  }
  EXPORT_SYMBOL_GPL(hrtimer_cancel);
-@@ -1268,10 +1304,17 @@ static inline int hrtimer_clockid_to_bas
+@@ -1268,10 +1280,17 @@ static inline int hrtimer_clockid_to_bas
  static void __hrtimer_init(struct hrtimer *timer, clockid_t clock_id,
  			   enum hrtimer_mode mode)
  {
@@ -19133,7 +18800,7 @@
  	memset(timer, 0, sizeof(struct hrtimer));
  
  	cpu_base = raw_cpu_ptr(&hrtimer_bases);
-@@ -1468,6 +1511,7 @@ static __latent_entropy void hrtimer_run
+@@ -1468,6 +1487,7 @@ static __latent_entropy void hrtimer_run
  	unsigned long flags;
  	ktime_t now;
  
@@ -19141,7 +18808,7 @@
  	raw_spin_lock_irqsave(&cpu_base->lock, flags);
  
  	now = hrtimer_update_base(cpu_base);
-@@ -1477,6 +1521,7 @@ static __latent_entropy void hrtimer_run
+@@ -1477,6 +1497,7 @@ static __latent_entropy void hrtimer_run
  	hrtimer_update_softirq_timer(cpu_base, true);
  
  	raw_spin_unlock_irqrestore(&cpu_base->lock, flags);
@@ -19149,7 +18816,7 @@
  }
  
  #ifdef CONFIG_HIGH_RES_TIMERS
-@@ -1648,13 +1693,52 @@ static enum hrtimer_restart hrtimer_wake
+@@ -1648,13 +1669,52 @@ static enum hrtimer_restart hrtimer_wake
  	return HRTIMER_NORESTART;
  }
  
@@ -19204,7 +18871,7 @@
  int nanosleep_copyout(struct restart_block *restart, struct timespec64 *ts)
  {
  	switch(restart->nanosleep.type) {
-@@ -1678,8 +1762,6 @@ static int __sched do_nanosleep(struct h
+@@ -1678,8 +1738,6 @@ static int __sched do_nanosleep(struct h
  {
  	struct restart_block *restart;
  
@@ -19213,7 +18880,7 @@
  	do {
  		set_current_state(TASK_INTERRUPTIBLE);
  		hrtimer_start_expires(&t->timer, mode);
-@@ -1687,12 +1769,12 @@ static int __sched do_nanosleep(struct h
+@@ -1687,12 +1745,12 @@ static int __sched do_nanosleep(struct h
  		if (likely(t->task))
  			freezable_schedule();
  
@@ -19227,7 +18894,7 @@
  
  	if (!t->task)
  		return 0;
-@@ -1716,10 +1798,9 @@ static long __sched hrtimer_nanosleep_re
+@@ -1716,10 +1774,9 @@ static long __sched hrtimer_nanosleep_re
  	struct hrtimer_sleeper t;
  	int ret;
  
@@ -19240,7 +18907,7 @@
  	ret = do_nanosleep(&t, HRTIMER_MODE_ABS);
  	destroy_hrtimer_on_stack(&t.timer);
  	return ret;
-@@ -1737,7 +1818,7 @@ long hrtimer_nanosleep(const struct time
+@@ -1737,7 +1794,7 @@ long hrtimer_nanosleep(const struct time
  	if (dl_task(current) || rt_task(current))
  		slack = 0;
  
@@ -19249,7 +18916,7 @@
  	hrtimer_set_expires_range_ns(&t.timer, timespec64_to_ktime(*rqtp), slack);
  	ret = do_nanosleep(&t, mode);
  	if (ret != -ERESTART_RESTARTBLOCK)
-@@ -1797,6 +1878,38 @@ COMPAT_SYSCALL_DEFINE2(nanosleep, struct
+@@ -1797,6 +1854,38 @@ COMPAT_SYSCALL_DEFINE2(nanosleep, struct
  }
  #endif
  
@@ -19288,7 +18955,7 @@
  /*
   * Functions related to boot-time initialization:
   */
-@@ -1818,6 +1931,7 @@ int hrtimers_prepare_cpu(unsigned int cp
+@@ -1818,6 +1907,7 @@ int hrtimers_prepare_cpu(unsigned int cp
  	cpu_base->softirq_next_timer = NULL;
  	cpu_base->expires_next = KTIME_MAX;
  	cpu_base->softirq_expires_next = KTIME_MAX;
@@ -19296,7 +18963,7 @@
  	return 0;
  }
  
-@@ -1936,11 +2050,9 @@ schedule_hrtimeout_range_clock(ktime_t *
+@@ -1936,11 +2026,9 @@ schedule_hrtimeout_range_clock(ktime_t *
  		return -EINTR;
  	}
  
@@ -19364,7 +19031,7 @@
  
  #include "posix-timers.h"
  
-@@ -786,6 +789,7 @@ check_timers_list(struct list_head *time
+@@ -789,6 +792,7 @@ check_timers_list(struct list_head *time
  			return t->expires;
  
  		t->firing = 1;
@@ -19372,7 +19039,7 @@
  		list_move_tail(&t->entry, firing);
  	}
  
-@@ -1131,18 +1135,31 @@ static inline int fastpath_timer_check(s
+@@ -1135,18 +1139,31 @@ static inline int fastpath_timer_check(s
  	return 0;
  }
  
@@ -19407,7 +19074,7 @@
  
  	/*
  	 * The fast path checks that there are no expired thread or thread
-@@ -1151,6 +1168,9 @@ void run_posix_cpu_timers(struct task_st
+@@ -1155,6 +1172,9 @@ void run_posix_cpu_timers(struct task_st
  	if (!fastpath_timer_check(tsk))
  		return;
  
@@ -19417,7 +19084,7 @@
  	if (!lock_task_sighand(tsk, &flags))
  		return;
  	/*
-@@ -1185,6 +1205,7 @@ void run_posix_cpu_timers(struct task_st
+@@ -1189,6 +1209,7 @@ void run_posix_cpu_timers(struct task_st
  		list_del_init(&timer->it.cpu.entry);
  		cpu_firing = timer->it.cpu.firing;
  		timer->it.cpu.firing = 0;
@@ -19425,7 +19092,7 @@
  		/*
  		 * The firing flag is -1 if we collided with a reset
  		 * of the timer, which already reported this
-@@ -1194,8 +1215,156 @@ void run_posix_cpu_timers(struct task_st
+@@ -1198,8 +1219,156 @@ void run_posix_cpu_timers(struct task_st
  			cpu_timer_fire(timer);
  		spin_unlock(&timer->it_lock);
  	}
@@ -19582,7 +19249,7 @@
  /*
   * Set one of the process-wide special case CPU timers or RLIMIT_CPU.
   * The tsk->sighand->siglock must be held by the caller.
-@@ -1312,6 +1481,8 @@ static int do_cpu_nanosleep(const clocki
+@@ -1318,6 +1487,8 @@ static int do_cpu_nanosleep(const clocki
  		spin_unlock_irq(&timer.it_lock);
  
  		while (error == TIMER_RETRY) {
@@ -19708,7 +19375,7 @@
  void common_timer_get(struct k_itimer *timr, struct itimerspec64 *cur_setting);
 --- a/kernel/time/tick-broadcast-hrtimer.c
 +++ b/kernel/time/tick-broadcast-hrtimer.c
-@@ -106,7 +106,7 @@ static enum hrtimer_restart bc_handler(s
+@@ -107,7 +107,7 @@ static enum hrtimer_restart bc_handler(s
  
  void tick_setup_hrtimer_broadcast(void)
  {
@@ -20021,7 +19688,7 @@
  			raw_spin_lock_irq(&base->lock);
  		}
  	}
-@@ -1655,6 +1693,7 @@ static inline void __run_timers(struct t
+@@ -1657,6 +1695,7 @@ static inline void __run_timers(struct t
  	if (!time_after_eq(jiffies, base->clk))
  		return;
  
@@ -20029,7 +19696,7 @@
  	raw_spin_lock_irq(&base->lock);
  
  	/*
-@@ -1681,8 +1720,8 @@ static inline void __run_timers(struct t
+@@ -1683,8 +1722,8 @@ static inline void __run_timers(struct t
  		while (levels--)
  			expire_timers(base, heads + levels);
  	}
@@ -20039,7 +19706,7 @@
  }
  
  /*
-@@ -1692,6 +1731,8 @@ static __latent_entropy void run_timer_s
+@@ -1694,6 +1733,8 @@ static __latent_entropy void run_timer_s
  {
  	struct timer_base *base = this_cpu_ptr(&timer_bases[BASE_STD]);
  
@@ -20048,7 +19715,7 @@
  	__run_timers(base);
  	if (IS_ENABLED(CONFIG_NO_HZ_COMMON))
  		__run_timers(this_cpu_ptr(&timer_bases[BASE_DEF]));
-@@ -1927,6 +1968,7 @@ static void __init init_timer_cpu(int cp
+@@ -1929,6 +1970,7 @@ static void __init init_timer_cpu(int cp
  		base->cpu = cpu;
  		raw_spin_lock_init(&base->lock);
  		base->clk = jiffies;
@@ -20262,25 +19929,7 @@
  
 --- a/kernel/workqueue.c
 +++ b/kernel/workqueue.c
-@@ -49,6 +49,8 @@
- #include <linux/uaccess.h>
- #include <linux/sched/isolation.h>
- #include <linux/nmi.h>
-+#include <linux/locallock.h>
-+#include <linux/delay.h>
- 
- #include "workqueue_internal.h"
- 
-@@ -123,11 +125,16 @@ enum {
-  *    cpu or grabbing pool->lock is enough for read access.  If
-  *    POOL_DISASSOCIATED is set, it's identical to L.
-  *
-+ *    On RT we need the extra protection via rt_lock_idle_list() for
-+ *    the list manipulations against read access from
-+ *    wq_worker_sleeping(). All other places are nicely serialized via
-+ *    pool->lock.
-+ *
-  * A: wq_pool_attach_mutex protected.
+@@ -127,7 +127,7 @@ enum {
   *
   * PL: wq_pool_mutex protected.
   *
@@ -20289,7 +19938,7 @@
   *
   * PW: wq_pool_mutex and wq->mutex protected for writes.  Either for reads.
   *
-@@ -136,7 +143,7 @@ enum {
+@@ -136,7 +136,7 @@ enum {
   *
   * WQ: wq->mutex protected.
   *
@@ -20298,7 +19947,16 @@
   *
   * MD: wq_mayday_lock protected.
   */
-@@ -183,7 +190,7 @@ struct worker_pool {
+@@ -144,7 +144,7 @@ enum {
+ /* struct worker is defined in workqueue_internal.h */
+ 
+ struct worker_pool {
+-	spinlock_t		lock;		/* the pool lock */
++	raw_spinlock_t		lock;		/* the pool lock */
+ 	int			cpu;		/* I: the associated cpu */
+ 	int			node;		/* I: the associated node ID */
+ 	int			id;		/* I: pool ID */
+@@ -183,7 +183,7 @@ struct worker_pool {
  	atomic_t		nr_running ____cacheline_aligned_in_smp;
  
  	/*
@@ -20307,7 +19965,7 @@
  	 * from get_work_pool().
  	 */
  	struct rcu_head		rcu;
-@@ -212,7 +219,7 @@ struct pool_workqueue {
+@@ -212,7 +212,7 @@ struct pool_workqueue {
  	/*
  	 * Release of unbound pwq is punted to system_wq.  See put_pwq()
  	 * and pwq_unbound_release_workfn() for details.  pool_workqueue
@@ -20316,16 +19974,18 @@
  	 * determined without grabbing wq->mutex.
  	 */
  	struct work_struct	unbound_release_work;
-@@ -350,6 +357,8 @@ EXPORT_SYMBOL_GPL(system_power_efficient
- struct workqueue_struct *system_freezable_power_efficient_wq __read_mostly;
- EXPORT_SYMBOL_GPL(system_freezable_power_efficient_wq);
+@@ -297,8 +297,8 @@ static struct workqueue_attrs *wq_update
  
-+static DEFINE_LOCAL_IRQ_LOCK(pendingb_lock);
-+
- static int worker_thread(void *__worker);
- static void workqueue_sysfs_unregister(struct workqueue_struct *wq);
+ static DEFINE_MUTEX(wq_pool_mutex);	/* protects pools and workqueues list */
+ static DEFINE_MUTEX(wq_pool_attach_mutex); /* protects worker attach/detach */
+-static DEFINE_SPINLOCK(wq_mayday_lock);	/* protects wq->maydays list */
+-static DECLARE_WAIT_QUEUE_HEAD(wq_manager_wait); /* wait for manager to go away */
++static DEFINE_RAW_SPINLOCK(wq_mayday_lock);	/* protects wq->maydays list */
++static DECLARE_SWAIT_QUEUE_HEAD(wq_manager_wait); /* wait for manager to go away */
  
-@@ -357,20 +366,20 @@ static void workqueue_sysfs_unregister(s
+ static LIST_HEAD(workqueues);		/* PR: list of all workqueues */
+ static bool workqueue_freezing;		/* PL: have wqs started freezing? */
+@@ -357,20 +357,20 @@ static void workqueue_sysfs_unregister(s
  #include <trace/events/workqueue.h>
  
  #define assert_rcu_or_pool_mutex()					\
@@ -20352,7 +20012,7 @@
  
  #define for_each_cpu_worker_pool(pool, cpu)				\
  	for ((pool) = &per_cpu(cpu_worker_pools, cpu)[0];		\
-@@ -382,7 +391,7 @@ static void workqueue_sysfs_unregister(s
+@@ -382,7 +382,7 @@ static void workqueue_sysfs_unregister(s
   * @pool: iteration cursor
   * @pi: integer used for iteration
   *
@@ -20361,7 +20021,7 @@
   * locked.  If the pool needs to be used beyond the locking in effect, the
   * caller is responsible for guaranteeing that the pool stays online.
   *
-@@ -414,7 +423,7 @@ static void workqueue_sysfs_unregister(s
+@@ -414,7 +414,7 @@ static void workqueue_sysfs_unregister(s
   * @pwq: iteration cursor
   * @wq: the target workqueue
   *
@@ -20370,39 +20030,7 @@
   * If the pwq needs to be used beyond the locking in effect, the caller is
   * responsible for guaranteeing that the pwq stays online.
   *
-@@ -426,6 +435,31 @@ static void workqueue_sysfs_unregister(s
- 		if (({ assert_rcu_or_wq_mutex(wq); false; })) { }	\
- 		else
- 
-+#ifdef CONFIG_PREEMPT_RT_BASE
-+static inline void rt_lock_idle_list(struct worker_pool *pool)
-+{
-+	preempt_disable();
-+}
-+static inline void rt_unlock_idle_list(struct worker_pool *pool)
-+{
-+	preempt_enable();
-+}
-+static inline void sched_lock_idle_list(struct worker_pool *pool) { }
-+static inline void sched_unlock_idle_list(struct worker_pool *pool) { }
-+#else
-+static inline void rt_lock_idle_list(struct worker_pool *pool) { }
-+static inline void rt_unlock_idle_list(struct worker_pool *pool) { }
-+static inline void sched_lock_idle_list(struct worker_pool *pool)
-+{
-+	spin_lock_irq(&pool->lock);
-+}
-+static inline void sched_unlock_idle_list(struct worker_pool *pool)
-+{
-+	spin_unlock_irq(&pool->lock);
-+}
-+#endif
-+
-+
- #ifdef CONFIG_DEBUG_OBJECTS_WORK
- 
- static struct debug_obj_descr work_debug_descr;
-@@ -550,7 +584,7 @@ static int worker_pool_assign_id(struct
+@@ -550,7 +550,7 @@ static int worker_pool_assign_id(struct
   * @wq: the target workqueue
   * @node: the node ID
   *
@@ -20411,7 +20039,7 @@
   * read locked.
   * If the pwq needs to be used beyond the locking in effect, the caller is
   * responsible for guaranteeing that the pwq stays online.
-@@ -694,8 +728,8 @@ static struct pool_workqueue *get_work_p
+@@ -694,8 +694,8 @@ static struct pool_workqueue *get_work_p
   * @work: the work item of interest
   *
   * Pools are created and destroyed under wq_pool_mutex, and allows read
@@ -20422,21 +20050,16 @@
   *
   * All fields of the returned pool are accessible as long as the above
   * mentioned locking is in effect.  If the returned pool needs to be used
-@@ -832,50 +866,45 @@ static struct worker *first_idle_worker(
+@@ -828,7 +828,7 @@ static struct worker *first_idle_worker(
+  * Wake up the first idle worker of @pool.
+  *
+  * CONTEXT:
+- * spin_lock_irq(pool->lock).
++ * raw_spin_lock_irq(pool->lock).
   */
  static void wake_up_worker(struct worker_pool *pool)
  {
--	struct worker *worker = first_idle_worker(pool);
-+	struct worker *worker;
-+
-+	rt_lock_idle_list(pool);
-+
-+	worker = first_idle_worker(pool);
- 
- 	if (likely(worker))
- 		wake_up_process(worker->task);
-+
-+	rt_unlock_idle_list(pool);
+@@ -839,43 +839,32 @@ static void wake_up_worker(struct worker
  }
  
  /**
@@ -20444,10 +20067,10 @@
 + * wq_worker_running - a worker is running again
   * @task: task waking up
 - * @cpu: CPU @task is waking up to
-- *
+  *
 - * This function is called during try_to_wake_up() when a worker is
 - * being awoken.
-  *
+- *
 - * CONTEXT:
 - * spin_lock_irq(rq->lock)
 + * This function is called when a worker returns from schedule()
@@ -20487,11 +20110,11 @@
 +void wq_worker_sleeping(struct task_struct *task)
  {
 -	struct worker *worker = kthread_data(task), *to_wakeup = NULL;
-+	struct worker *worker = kthread_data(task);
++	struct worker *next, *worker = kthread_data(task);
  	struct worker_pool *pool;
  
  	/*
-@@ -884,29 +913,26 @@ struct task_struct *wq_worker_sleeping(s
+@@ -884,13 +873,15 @@ struct task_struct *wq_worker_sleeping(s
  	 * checking NOT_RUNNING.
  	 */
  	if (worker->flags & WORKER_NOT_RUNNING)
@@ -20507,31 +20130,63 @@
 +		return;
 +
 +	worker->sleeping = 1;
++	raw_spin_lock_irq(&pool->lock);
  
  	/*
  	 * The counterpart of the following dec_and_test, implied mb,
- 	 * worklist not empty test sequence is in insert_work().
- 	 * Please read comment there.
--	 *
--	 * NOT_RUNNING is clear.  This means that we're bound to and
--	 * running on the local cpu w/ rq lock held and preemption
--	 * disabled, which in turn means that none else could be
--	 * manipulating idle_list, so dereferencing idle_list without pool
--	 * lock is safe.
+@@ -904,9 +895,12 @@ struct task_struct *wq_worker_sleeping(s
+ 	 * lock is safe.
  	 */
  	if (atomic_dec_and_test(&pool->nr_running) &&
 -	    !list_empty(&pool->worklist))
 -		to_wakeup = first_idle_worker(pool);
 -	return to_wakeup ? to_wakeup->task : NULL;
 +	    !list_empty(&pool->worklist)) {
-+		sched_lock_idle_list(pool);
-+		wake_up_worker(pool);
-+		sched_unlock_idle_list(pool);
++		next = first_idle_worker(pool);
++		if (next)
++			wake_up_process(next->task);
 +	}
++	raw_spin_unlock_irq(&pool->lock);
  }
  
  /**
-@@ -1100,12 +1126,14 @@ static void put_pwq_unlocked(struct pool
+@@ -917,7 +911,7 @@ struct task_struct *wq_worker_sleeping(s
+  * Set @flags in @worker->flags and adjust nr_running accordingly.
+  *
+  * CONTEXT:
+- * spin_lock_irq(pool->lock)
++ * raw_spin_lock_irq(pool->lock)
+  */
+ static inline void worker_set_flags(struct worker *worker, unsigned int flags)
+ {
+@@ -942,7 +936,7 @@ static inline void worker_set_flags(stru
+  * Clear @flags in @worker->flags and adjust nr_running accordingly.
+  *
+  * CONTEXT:
+- * spin_lock_irq(pool->lock)
++ * raw_spin_lock_irq(pool->lock)
+  */
+ static inline void worker_clr_flags(struct worker *worker, unsigned int flags)
+ {
+@@ -990,7 +984,7 @@ static inline void worker_clr_flags(stru
+  * actually occurs, it should be easy to locate the culprit work function.
+  *
+  * CONTEXT:
+- * spin_lock_irq(pool->lock).
++ * raw_spin_lock_irq(pool->lock).
+  *
+  * Return:
+  * Pointer to worker which is executing @work if found, %NULL
+@@ -1025,7 +1019,7 @@ static struct worker *find_worker_execut
+  * nested inside outer list_for_each_entry_safe().
+  *
+  * CONTEXT:
+- * spin_lock_irq(pool->lock).
++ * raw_spin_lock_irq(pool->lock).
+  */
+ static void move_linked_works(struct work_struct *work, struct list_head *head,
+ 			      struct work_struct **nextp)
+@@ -1100,12 +1094,12 @@ static void put_pwq_unlocked(struct pool
  {
  	if (pwq) {
  		/*
@@ -20540,25 +20195,23 @@
  		 * following lock operations are safe.
  		 */
 -		spin_lock_irq(&pwq->pool->lock);
-+		rcu_read_lock();
-+		local_spin_lock_irq(pendingb_lock, &pwq->pool->lock);
++		raw_spin_lock_irq(&pwq->pool->lock);
  		put_pwq(pwq);
 -		spin_unlock_irq(&pwq->pool->lock);
-+		local_spin_unlock_irq(pendingb_lock, &pwq->pool->lock);
-+		rcu_read_unlock();
++		raw_spin_unlock_irq(&pwq->pool->lock);
  	}
  }
  
-@@ -1209,7 +1237,7 @@ static int try_to_grab_pending(struct wo
- 	struct worker_pool *pool;
- 	struct pool_workqueue *pwq;
- 
--	local_irq_save(*flags);
-+	local_lock_irqsave(pendingb_lock, *flags);
- 
- 	/* try to steal the timer if it exists */
- 	if (is_dwork) {
-@@ -1228,6 +1256,7 @@ static int try_to_grab_pending(struct wo
+@@ -1138,7 +1132,7 @@ static void pwq_activate_first_delayed(s
+  * decrement nr_in_flight of its pwq and handle workqueue flushing.
+  *
+  * CONTEXT:
+- * spin_lock_irq(pool->lock).
++ * raw_spin_lock_irq(pool->lock).
+  */
+ static void pwq_dec_nr_in_flight(struct pool_workqueue *pwq, int color)
+ {
+@@ -1228,6 +1222,7 @@ static int try_to_grab_pending(struct wo
  	if (!test_and_set_bit(WORK_STRUCT_PENDING_BIT, work_data_bits(work)))
  		return 0;
  
@@ -20566,40 +20219,41 @@
  	/*
  	 * The queueing is in progress, or it is already queued. Try to
  	 * steal it from ->worklist without clearing WORK_STRUCT_PENDING.
-@@ -1266,14 +1295,16 @@ static int try_to_grab_pending(struct wo
+@@ -1236,7 +1231,7 @@ static int try_to_grab_pending(struct wo
+ 	if (!pool)
+ 		goto fail;
+ 
+-	spin_lock(&pool->lock);
++	raw_spin_lock(&pool->lock);
+ 	/*
+ 	 * work->data is guaranteed to point to pwq only while the work
+ 	 * item is queued on pwq->wq, and both updating work->data to point
+@@ -1265,11 +1260,13 @@ static int try_to_grab_pending(struct wo
+ 		/* work->data points to pwq iff queued, point to pool */
  		set_work_pool_and_keep_pending(work, pool->id);
  
- 		spin_unlock(&pool->lock);
+-		spin_unlock(&pool->lock);
++		raw_spin_unlock(&pool->lock);
 +		rcu_read_unlock();
  		return 1;
  	}
- 	spin_unlock(&pool->lock);
+-	spin_unlock(&pool->lock);
++	raw_spin_unlock(&pool->lock);
  fail:
--	local_irq_restore(*flags);
 +	rcu_read_unlock();
-+	local_unlock_irqrestore(pendingb_lock, *flags);
+ 	local_irq_restore(*flags);
  	if (work_is_canceling(work))
  		return -ENOENT;
--	cpu_relax();
-+	cpu_chill();
- 	return -EAGAIN;
- }
- 
-@@ -1375,7 +1406,13 @@ static void __queue_work(int cpu, struct
- 	 * queued or lose PENDING.  Grabbing PENDING and queueing should
- 	 * happen with IRQ disabled.
- 	 */
-+#ifndef CONFIG_PREEMPT_RT_FULL
-+	/*
-+	 * nort: On RT the "interrupts-disabled" rule has been replaced with
-+	 * pendingb_lock.
-+	 */
- 	lockdep_assert_irqs_disabled();
-+#endif
- 
- 	debug_work_activate(work);
- 
-@@ -1383,6 +1420,7 @@ static void __queue_work(int cpu, struct
+@@ -1288,7 +1285,7 @@ fail:
+  * work_struct flags.
+  *
+  * CONTEXT:
+- * spin_lock_irq(pool->lock).
++ * raw_spin_lock_irq(pool->lock).
+  */
+ static void insert_work(struct pool_workqueue *pwq, struct work_struct *work,
+ 			struct list_head *head, unsigned int extra_flags)
+@@ -1383,6 +1380,7 @@ static void __queue_work(int cpu, struct
  	if (unlikely(wq->flags & __WQ_DRAINING) &&
  	    WARN_ON_ONCE(!is_chained_work(wq)))
  		return;
@@ -20607,7 +20261,40 @@
  retry:
  	if (req_cpu == WORK_CPU_UNBOUND)
  		cpu = wq_select_unbound_cpu(raw_smp_processor_id());
-@@ -1439,10 +1477,8 @@ retry:
+@@ -1402,7 +1400,7 @@ retry:
+ 	if (last_pool && last_pool != pwq->pool) {
+ 		struct worker *worker;
+ 
+-		spin_lock(&last_pool->lock);
++		raw_spin_lock(&last_pool->lock);
+ 
+ 		worker = find_worker_executing_work(last_pool, work);
+ 
+@@ -1410,11 +1408,11 @@ retry:
+ 			pwq = worker->current_pwq;
+ 		} else {
+ 			/* meh... not running there, queue here */
+-			spin_unlock(&last_pool->lock);
+-			spin_lock(&pwq->pool->lock);
++			raw_spin_unlock(&last_pool->lock);
++			raw_spin_lock(&pwq->pool->lock);
+ 		}
+ 	} else {
+-		spin_lock(&pwq->pool->lock);
++		raw_spin_lock(&pwq->pool->lock);
+ 	}
+ 
+ 	/*
+@@ -1427,7 +1425,7 @@ retry:
+ 	 */
+ 	if (unlikely(!pwq->refcnt)) {
+ 		if (wq->flags & WQ_UNBOUND) {
+-			spin_unlock(&pwq->pool->lock);
++			raw_spin_unlock(&pwq->pool->lock);
+ 			cpu_relax();
+ 			goto retry;
+ 		}
+@@ -1439,10 +1437,8 @@ retry:
  	/* pwq determined, queue */
  	trace_workqueue_queue_work(req_cpu, pwq, work);
  
@@ -20620,117 +20307,309 @@
  
  	pwq->nr_in_flight[pwq->work_color]++;
  	work_flags = work_color_to_flags(pwq->work_color);
-@@ -1460,7 +1496,9 @@ retry:
+@@ -1460,7 +1456,9 @@ retry:
  
  	insert_work(pwq, work, worklist, work_flags);
  
+-	spin_unlock(&pwq->pool->lock);
 +out:
- 	spin_unlock(&pwq->pool->lock);
++	raw_spin_unlock(&pwq->pool->lock);
 +	rcu_read_unlock();
  }
  
  /**
-@@ -1480,14 +1518,14 @@ bool queue_work_on(int cpu, struct workq
- 	bool ret = false;
- 	unsigned long flags;
- 
--	local_irq_save(flags);
-+	local_lock_irqsave(pendingb_lock,flags);
- 
- 	if (!test_and_set_bit(WORK_STRUCT_PENDING_BIT, work_data_bits(work))) {
- 		__queue_work(cpu, wq, work);
- 		ret = true;
- 	}
- 
--	local_irq_restore(flags);
-+	local_unlock_irqrestore(pendingb_lock, flags);
- 	return ret;
- }
- EXPORT_SYMBOL(queue_work_on);
-@@ -1496,8 +1534,11 @@ void delayed_work_timer_fn(struct timer_
+@@ -1495,9 +1493,11 @@ EXPORT_SYMBOL(queue_work_on);
+ void delayed_work_timer_fn(struct timer_list *t)
  {
  	struct delayed_work *dwork = from_timer(dwork, t, timer);
++	unsigned long flags;
  
-+	/* XXX */
-+	/* local_lock(pendingb_lock); */
- 	/* should have been called from irqsafe timer with irq already off */
+-	/* should have been called from irqsafe timer with irq already off */
++	local_irq_save(flags);
  	__queue_work(dwork->cpu, dwork->wq, &dwork->work);
-+	/* local_unlock(pendingb_lock); */
++	local_irq_restore(flags);
  }
  EXPORT_SYMBOL(delayed_work_timer_fn);
  
-@@ -1552,14 +1593,14 @@ bool queue_delayed_work_on(int cpu, stru
- 	unsigned long flags;
- 
- 	/* read the comment in __queue_work() */
--	local_irq_save(flags);
-+	local_lock_irqsave(pendingb_lock, flags);
- 
- 	if (!test_and_set_bit(WORK_STRUCT_PENDING_BIT, work_data_bits(work))) {
- 		__queue_delayed_work(cpu, wq, dwork, delay);
- 		ret = true;
- 	}
- 
--	local_irq_restore(flags);
-+	local_unlock_irqrestore(pendingb_lock, flags);
- 	return ret;
- }
- EXPORT_SYMBOL(queue_delayed_work_on);
-@@ -1594,7 +1635,7 @@ bool mod_delayed_work_on(int cpu, struct
- 
- 	if (likely(ret >= 0)) {
- 		__queue_delayed_work(cpu, wq, dwork, delay);
--		local_irq_restore(flags);
-+		local_unlock_irqrestore(pendingb_lock, flags);
- 	}
- 
- 	/* -ENOENT from try_to_grab_pending() becomes %true */
-@@ -1605,11 +1646,12 @@ EXPORT_SYMBOL_GPL(mod_delayed_work_on);
- static void rcu_work_rcufn(struct rcu_head *rcu)
+@@ -1644,7 +1644,7 @@ EXPORT_SYMBOL(queue_rcu_work);
+  * necessary.
+  *
+  * LOCKING:
+- * spin_lock_irq(pool->lock).
++ * raw_spin_lock_irq(pool->lock).
+  */
+ static void worker_enter_idle(struct worker *worker)
  {
- 	struct rcu_work *rwork = container_of(rcu, struct rcu_work, rcu);
-+	unsigned long flags;
+@@ -1684,7 +1684,7 @@ static void worker_enter_idle(struct wor
+  * @worker is leaving idle state.  Update stats.
+  *
+  * LOCKING:
+- * spin_lock_irq(pool->lock).
++ * raw_spin_lock_irq(pool->lock).
+  */
+ static void worker_leave_idle(struct worker *worker)
+ {
+@@ -1822,11 +1822,11 @@ static struct worker *create_worker(stru
+ 	worker_attach_to_pool(worker, pool);
  
- 	/* read the comment in __queue_work() */
--	local_irq_disable();
-+	local_lock_irqsave(pendingb_lock, flags);
- 	__queue_work(WORK_CPU_UNBOUND, rwork->wq, &rwork->work);
--	local_irq_enable();
-+	local_unlock_irqrestore(pendingb_lock, flags);
- }
- 
- /**
-@@ -1661,7 +1703,9 @@ static void worker_enter_idle(struct wor
- 	worker->last_active = jiffies;
- 
- 	/* idle_list is LIFO */
-+	rt_lock_idle_list(pool);
- 	list_add(&worker->entry, &pool->idle_list);
-+	rt_unlock_idle_list(pool);
- 
- 	if (too_many_workers(pool) && !timer_pending(&pool->idle_timer))
- 		mod_timer(&pool->idle_timer, jiffies + IDLE_WORKER_TIMEOUT);
-@@ -1694,7 +1738,9 @@ static void worker_leave_idle(struct wor
- 		return;
- 	worker_clr_flags(worker, WORKER_IDLE);
- 	pool->nr_idle--;
-+	rt_lock_idle_list(pool);
- 	list_del_init(&worker->entry);
-+	rt_unlock_idle_list(pool);
- }
- 
- static struct worker *alloc_worker(int node)
-@@ -1862,7 +1908,9 @@ static void destroy_worker(struct worker
- 	pool->nr_workers--;
- 	pool->nr_idle--;
- 
-+	rt_lock_idle_list(pool);
- 	list_del_init(&worker->entry);
-+	rt_unlock_idle_list(pool);
- 	worker->flags |= WORKER_DIE;
+ 	/* start the newly created worker */
+-	spin_lock_irq(&pool->lock);
++	raw_spin_lock_irq(&pool->lock);
+ 	worker->pool->nr_workers++;
+ 	worker_enter_idle(worker);
  	wake_up_process(worker->task);
+-	spin_unlock_irq(&pool->lock);
++	raw_spin_unlock_irq(&pool->lock);
+ 
+ 	return worker;
+ 
+@@ -1845,7 +1845,7 @@ fail:
+  * be idle.
+  *
+  * CONTEXT:
+- * spin_lock_irq(pool->lock).
++ * raw_spin_lock_irq(pool->lock).
+  */
+ static void destroy_worker(struct worker *worker)
+ {
+@@ -1871,7 +1871,7 @@ static void idle_worker_timeout(struct t
+ {
+ 	struct worker_pool *pool = from_timer(pool, t, idle_timer);
+ 
+-	spin_lock_irq(&pool->lock);
++	raw_spin_lock_irq(&pool->lock);
+ 
+ 	while (too_many_workers(pool)) {
+ 		struct worker *worker;
+@@ -1889,7 +1889,7 @@ static void idle_worker_timeout(struct t
+ 		destroy_worker(worker);
+ 	}
+ 
+-	spin_unlock_irq(&pool->lock);
++	raw_spin_unlock_irq(&pool->lock);
  }
-@@ -2855,14 +2903,14 @@ static bool start_flush_work(struct work
+ 
+ static void send_mayday(struct work_struct *work)
+@@ -1920,8 +1920,8 @@ static void pool_mayday_timeout(struct t
+ 	struct worker_pool *pool = from_timer(pool, t, mayday_timer);
+ 	struct work_struct *work;
+ 
+-	spin_lock_irq(&pool->lock);
+-	spin_lock(&wq_mayday_lock);		/* for wq->maydays */
++	raw_spin_lock_irq(&pool->lock);
++	raw_spin_lock(&wq_mayday_lock);		/* for wq->maydays */
+ 
+ 	if (need_to_create_worker(pool)) {
+ 		/*
+@@ -1934,8 +1934,8 @@ static void pool_mayday_timeout(struct t
+ 			send_mayday(work);
+ 	}
+ 
+-	spin_unlock(&wq_mayday_lock);
+-	spin_unlock_irq(&pool->lock);
++	raw_spin_unlock(&wq_mayday_lock);
++	raw_spin_unlock_irq(&pool->lock);
+ 
+ 	mod_timer(&pool->mayday_timer, jiffies + MAYDAY_INTERVAL);
+ }
+@@ -1954,7 +1954,7 @@ static void pool_mayday_timeout(struct t
+  * may_start_working() %true.
+  *
+  * LOCKING:
+- * spin_lock_irq(pool->lock) which may be released and regrabbed
++ * raw_spin_lock_irq(pool->lock) which may be released and regrabbed
+  * multiple times.  Does GFP_KERNEL allocations.  Called only from
+  * manager.
+  */
+@@ -1963,7 +1963,7 @@ __releases(&pool->lock)
+ __acquires(&pool->lock)
+ {
+ restart:
+-	spin_unlock_irq(&pool->lock);
++	raw_spin_unlock_irq(&pool->lock);
+ 
+ 	/* if we don't make progress in MAYDAY_INITIAL_TIMEOUT, call for help */
+ 	mod_timer(&pool->mayday_timer, jiffies + MAYDAY_INITIAL_TIMEOUT);
+@@ -1979,7 +1979,7 @@ restart:
+ 	}
+ 
+ 	del_timer_sync(&pool->mayday_timer);
+-	spin_lock_irq(&pool->lock);
++	raw_spin_lock_irq(&pool->lock);
+ 	/*
+ 	 * This is necessary even after a new worker was just successfully
+ 	 * created as @pool->lock was dropped and the new worker might have
+@@ -2002,7 +2002,7 @@ restart:
+  * and may_start_working() is true.
+  *
+  * CONTEXT:
+- * spin_lock_irq(pool->lock) which may be released and regrabbed
++ * raw_spin_lock_irq(pool->lock) which may be released and regrabbed
+  * multiple times.  Does GFP_KERNEL allocations.
+  *
+  * Return:
+@@ -2025,7 +2025,7 @@ static bool manage_workers(struct worker
+ 
+ 	pool->manager = NULL;
+ 	pool->flags &= ~POOL_MANAGER_ACTIVE;
+-	wake_up(&wq_manager_wait);
++	swake_up_one(&wq_manager_wait);
+ 	return true;
+ }
+ 
+@@ -2041,7 +2041,7 @@ static bool manage_workers(struct worker
+  * call this function to process a work.
+  *
+  * CONTEXT:
+- * spin_lock_irq(pool->lock) which is released and regrabbed.
++ * raw_spin_lock_irq(pool->lock) which is released and regrabbed.
+  */
+ static void process_one_work(struct worker *worker, struct work_struct *work)
+ __releases(&pool->lock)
+@@ -2123,7 +2123,7 @@ __acquires(&pool->lock)
+ 	 */
+ 	set_work_pool_and_clear_pending(work, pool->id);
+ 
+-	spin_unlock_irq(&pool->lock);
++	raw_spin_unlock_irq(&pool->lock);
+ 
+ 	lock_map_acquire(&pwq->wq->lockdep_map);
+ 	lock_map_acquire(&lockdep_map);
+@@ -2178,7 +2178,7 @@ __acquires(&pool->lock)
+ 	 */
+ 	cond_resched();
+ 
+-	spin_lock_irq(&pool->lock);
++	raw_spin_lock_irq(&pool->lock);
+ 
+ 	/* clear cpu intensive status */
+ 	if (unlikely(cpu_intensive))
+@@ -2201,7 +2201,7 @@ __acquires(&pool->lock)
+  * fetches a work from the top and executes it.
+  *
+  * CONTEXT:
+- * spin_lock_irq(pool->lock) which may be released and regrabbed
++ * raw_spin_lock_irq(pool->lock) which may be released and regrabbed
+  * multiple times.
+  */
+ static void process_scheduled_works(struct worker *worker)
+@@ -2243,11 +2243,11 @@ static int worker_thread(void *__worker)
+ 	/* tell the scheduler that this is a workqueue worker */
+ 	set_pf_worker(true);
+ woke_up:
+-	spin_lock_irq(&pool->lock);
++	raw_spin_lock_irq(&pool->lock);
+ 
+ 	/* am I supposed to die? */
+ 	if (unlikely(worker->flags & WORKER_DIE)) {
+-		spin_unlock_irq(&pool->lock);
++		raw_spin_unlock_irq(&pool->lock);
+ 		WARN_ON_ONCE(!list_empty(&worker->entry));
+ 		set_pf_worker(false);
+ 
+@@ -2313,7 +2313,7 @@ sleep:
+ 	 */
+ 	worker_enter_idle(worker);
+ 	__set_current_state(TASK_IDLE);
+-	spin_unlock_irq(&pool->lock);
++	raw_spin_unlock_irq(&pool->lock);
+ 	schedule();
+ 	goto woke_up;
+ }
+@@ -2367,7 +2367,7 @@ repeat:
+ 	should_stop = kthread_should_stop();
+ 
+ 	/* see whether any pwq is asking for help */
+-	spin_lock_irq(&wq_mayday_lock);
++	raw_spin_lock_irq(&wq_mayday_lock);
+ 
+ 	while (!list_empty(&wq->maydays)) {
+ 		struct pool_workqueue *pwq = list_first_entry(&wq->maydays,
+@@ -2379,11 +2379,11 @@ repeat:
+ 		__set_current_state(TASK_RUNNING);
+ 		list_del_init(&pwq->mayday_node);
+ 
+-		spin_unlock_irq(&wq_mayday_lock);
++		raw_spin_unlock_irq(&wq_mayday_lock);
+ 
+ 		worker_attach_to_pool(rescuer, pool);
+ 
+-		spin_lock_irq(&pool->lock);
++		raw_spin_lock_irq(&pool->lock);
+ 
+ 		/*
+ 		 * Slurp in all works issued via this workqueue and
+@@ -2412,10 +2412,10 @@ repeat:
+ 			 * incur MAYDAY_INTERVAL delay inbetween.
+ 			 */
+ 			if (need_to_create_worker(pool)) {
+-				spin_lock(&wq_mayday_lock);
++				raw_spin_lock(&wq_mayday_lock);
+ 				get_pwq(pwq);
+ 				list_move_tail(&pwq->mayday_node, &wq->maydays);
+-				spin_unlock(&wq_mayday_lock);
++				raw_spin_unlock(&wq_mayday_lock);
+ 			}
+ 		}
+ 
+@@ -2433,14 +2433,14 @@ repeat:
+ 		if (need_more_worker(pool))
+ 			wake_up_worker(pool);
+ 
+-		spin_unlock_irq(&pool->lock);
++		raw_spin_unlock_irq(&pool->lock);
+ 
+ 		worker_detach_from_pool(rescuer);
+ 
+-		spin_lock_irq(&wq_mayday_lock);
++		raw_spin_lock_irq(&wq_mayday_lock);
+ 	}
+ 
+-	spin_unlock_irq(&wq_mayday_lock);
++	raw_spin_unlock_irq(&wq_mayday_lock);
+ 
+ 	if (should_stop) {
+ 		__set_current_state(TASK_RUNNING);
+@@ -2520,7 +2520,7 @@ static void wq_barrier_func(struct work_
+  * underneath us, so we can't reliably determine pwq from @target.
+  *
+  * CONTEXT:
+- * spin_lock_irq(pool->lock).
++ * raw_spin_lock_irq(pool->lock).
+  */
+ static void insert_wq_barrier(struct pool_workqueue *pwq,
+ 			      struct wq_barrier *barr,
+@@ -2607,7 +2607,7 @@ static bool flush_workqueue_prep_pwqs(st
+ 	for_each_pwq(pwq, wq) {
+ 		struct worker_pool *pool = pwq->pool;
+ 
+-		spin_lock_irq(&pool->lock);
++		raw_spin_lock_irq(&pool->lock);
+ 
+ 		if (flush_color >= 0) {
+ 			WARN_ON_ONCE(pwq->flush_color != -1);
+@@ -2624,7 +2624,7 @@ static bool flush_workqueue_prep_pwqs(st
+ 			pwq->work_color = work_color;
+ 		}
+ 
+-		spin_unlock_irq(&pool->lock);
++		raw_spin_unlock_irq(&pool->lock);
+ 	}
+ 
+ 	if (flush_color >= 0 && atomic_dec_and_test(&wq->nr_pwqs_to_flush))
+@@ -2824,9 +2824,9 @@ reflush:
+ 	for_each_pwq(pwq, wq) {
+ 		bool drained;
+ 
+-		spin_lock_irq(&pwq->pool->lock);
++		raw_spin_lock_irq(&pwq->pool->lock);
+ 		drained = !pwq->nr_active && list_empty(&pwq->delayed_works);
+-		spin_unlock_irq(&pwq->pool->lock);
++		raw_spin_unlock_irq(&pwq->pool->lock);
+ 
+ 		if (drained)
+ 			continue;
+@@ -2855,14 +2855,14 @@ static bool start_flush_work(struct work
  
  	might_sleep();
  
@@ -20744,11 +20623,20 @@
  	}
  
 -	spin_lock(&pool->lock);
-+	spin_lock_irq(&pool->lock);
++	raw_spin_lock_irq(&pool->lock);
  	/* see the comment in try_to_grab_pending() with the same code */
  	pwq = get_work_pwq(work);
  	if (pwq) {
-@@ -2894,10 +2942,11 @@ static bool start_flush_work(struct work
+@@ -2878,7 +2878,7 @@ static bool start_flush_work(struct work
+ 	check_flush_dependency(pwq->wq, work);
+ 
+ 	insert_wq_barrier(pwq, barr, work, worker);
+-	spin_unlock_irq(&pool->lock);
++	raw_spin_unlock_irq(&pool->lock);
+ 
+ 	/*
+ 	 * Force a lock recursion deadlock when using flush_work() inside a
+@@ -2894,10 +2894,11 @@ static bool start_flush_work(struct work
  		lock_map_acquire(&pwq->wq->lockdep_map);
  		lock_map_release(&pwq->wq->lockdep_map);
  	}
@@ -20756,43 +20644,65 @@
 +	rcu_read_unlock();
  	return true;
  already_gone:
- 	spin_unlock_irq(&pool->lock);
+-	spin_unlock_irq(&pool->lock);
++	raw_spin_unlock_irq(&pool->lock);
 +	rcu_read_unlock();
  	return false;
  }
  
-@@ -2997,7 +3046,7 @@ static bool __cancel_work_timer(struct w
- 
- 	/* tell other tasks trying to grab @work to back off */
- 	mark_work_canceling(work);
--	local_irq_restore(flags);
-+	local_unlock_irqrestore(pendingb_lock, flags);
- 
- 	/*
- 	 * This allows canceling during early boot.  We know that @work
-@@ -3058,10 +3107,10 @@ EXPORT_SYMBOL_GPL(cancel_work_sync);
+@@ -3209,7 +3210,7 @@ EXPORT_SYMBOL_GPL(execute_in_process_con
+  *
+  * Undo alloc_workqueue_attrs().
   */
- bool flush_delayed_work(struct delayed_work *dwork)
+-void free_workqueue_attrs(struct workqueue_attrs *attrs)
++static void free_workqueue_attrs(struct workqueue_attrs *attrs)
  {
--	local_irq_disable();
-+	local_lock_irq(pendingb_lock);
- 	if (del_timer_sync(&dwork->timer))
- 		__queue_work(dwork->cpu, dwork->wq, &dwork->work);
--	local_irq_enable();
-+	local_unlock_irq(pendingb_lock);
- 	return flush_work(&dwork->work);
- }
- EXPORT_SYMBOL(flush_delayed_work);
-@@ -3099,7 +3148,7 @@ static bool __cancel_work(struct work_st
- 		return false;
+ 	if (attrs) {
+ 		free_cpumask_var(attrs->cpumask);
+@@ -3219,21 +3220,20 @@ void free_workqueue_attrs(struct workque
  
- 	set_work_pool_and_clear_pending(work, get_work_pool_id(work));
--	local_irq_restore(flags);
-+	local_unlock_irqrestore(pendingb_lock, flags);
- 	return ret;
- }
+ /**
+  * alloc_workqueue_attrs - allocate a workqueue_attrs
+- * @gfp_mask: allocation mask to use
+  *
+  * Allocate a new workqueue_attrs, initialize with default settings and
+  * return it.
+  *
+  * Return: The allocated new workqueue_attr on success. %NULL on failure.
+  */
+-struct workqueue_attrs *alloc_workqueue_attrs(gfp_t gfp_mask)
++static struct workqueue_attrs *alloc_workqueue_attrs(void)
+ {
+ 	struct workqueue_attrs *attrs;
  
-@@ -3344,7 +3393,7 @@ static void rcu_free_pool(struct rcu_hea
+-	attrs = kzalloc(sizeof(*attrs), gfp_mask);
++	attrs = kzalloc(sizeof(*attrs), GFP_KERNEL);
+ 	if (!attrs)
+ 		goto fail;
+-	if (!alloc_cpumask_var(&attrs->cpumask, gfp_mask))
++	if (!alloc_cpumask_var(&attrs->cpumask, GFP_KERNEL))
+ 		goto fail;
+ 
+ 	cpumask_copy(attrs->cpumask, cpu_possible_mask);
+@@ -3290,7 +3290,7 @@ static bool wqattrs_equal(const struct w
+  */
+ static int init_worker_pool(struct worker_pool *pool)
+ {
+-	spin_lock_init(&pool->lock);
++	raw_spin_lock_init(&pool->lock);
+ 	pool->id = -1;
+ 	pool->cpu = -1;
+ 	pool->node = NUMA_NO_NODE;
+@@ -3311,7 +3311,7 @@ static int init_worker_pool(struct worke
+ 	pool->refcnt = 1;
+ 
+ 	/* shouldn't fail above this point */
+-	pool->attrs = alloc_workqueue_attrs(GFP_KERNEL);
++	pool->attrs = alloc_workqueue_attrs();
+ 	if (!pool->attrs)
+ 		return -ENOMEM;
+ 	return 0;
+@@ -3344,7 +3344,7 @@ static void rcu_free_pool(struct rcu_hea
   * put_unbound_pool - put a worker_pool
   * @pool: worker_pool to put
   *
@@ -20801,7 +20711,26 @@
   * safe manner.  get_unbound_pool() calls this function on its failure path
   * and this function should be able to release pools which went through,
   * successfully or not, init_worker_pool().
-@@ -3398,8 +3447,8 @@ static void put_unbound_pool(struct work
+@@ -3376,15 +3376,15 @@ static void put_unbound_pool(struct work
+ 	 * @pool's workers from blocking on attach_mutex.  We're the last
+ 	 * manager and @pool gets freed with the flag set.
+ 	 */
+-	spin_lock_irq(&pool->lock);
+-	wait_event_lock_irq(wq_manager_wait,
++	raw_spin_lock_irq(&pool->lock);
++	swait_event_lock_irq(wq_manager_wait,
+ 			    !(pool->flags & POOL_MANAGER_ACTIVE), pool->lock);
+ 	pool->flags |= POOL_MANAGER_ACTIVE;
+ 
+ 	while ((worker = first_idle_worker(pool)))
+ 		destroy_worker(worker);
+ 	WARN_ON(pool->nr_workers || pool->nr_idle);
+-	spin_unlock_irq(&pool->lock);
++	raw_spin_unlock_irq(&pool->lock);
+ 
+ 	mutex_lock(&wq_pool_attach_mutex);
+ 	if (!list_empty(&pool->workers))
+@@ -3398,8 +3398,8 @@ static void put_unbound_pool(struct work
  	del_timer_sync(&pool->idle_timer);
  	del_timer_sync(&pool->mayday_timer);
  
@@ -20812,7 +20741,7 @@
  }
  
  /**
-@@ -3506,14 +3555,14 @@ static void pwq_unbound_release_workfn(s
+@@ -3506,14 +3506,14 @@ static void pwq_unbound_release_workfn(s
  	put_unbound_pool(pool);
  	mutex_unlock(&wq_pool_mutex);
  
@@ -20829,7 +20758,74 @@
  }
  
  /**
-@@ -4198,7 +4247,7 @@ void destroy_workqueue(struct workqueue_
+@@ -3538,7 +3538,7 @@ static void pwq_adjust_max_active(struct
+ 		return;
+ 
+ 	/* this function can be called during early boot w/ irq disabled */
+-	spin_lock_irqsave(&pwq->pool->lock, flags);
++	raw_spin_lock_irqsave(&pwq->pool->lock, flags);
+ 
+ 	/*
+ 	 * During [un]freezing, the caller is responsible for ensuring that
+@@ -3561,7 +3561,7 @@ static void pwq_adjust_max_active(struct
+ 		pwq->max_active = 0;
+ 	}
+ 
+-	spin_unlock_irqrestore(&pwq->pool->lock, flags);
++	raw_spin_unlock_irqrestore(&pwq->pool->lock, flags);
+ }
+ 
+ /* initialize newly alloced @pwq which is associated with @wq and @pool */
+@@ -3734,8 +3734,8 @@ apply_wqattrs_prepare(struct workqueue_s
+ 
+ 	ctx = kzalloc(struct_size(ctx, pwq_tbl, nr_node_ids), GFP_KERNEL);
+ 
+-	new_attrs = alloc_workqueue_attrs(GFP_KERNEL);
+-	tmp_attrs = alloc_workqueue_attrs(GFP_KERNEL);
++	new_attrs = alloc_workqueue_attrs();
++	tmp_attrs = alloc_workqueue_attrs();
+ 	if (!ctx || !new_attrs || !tmp_attrs)
+ 		goto out_free;
+ 
+@@ -3871,7 +3871,7 @@ static int apply_workqueue_attrs_locked(
+  *
+  * Return: 0 on success and -errno on failure.
+  */
+-int apply_workqueue_attrs(struct workqueue_struct *wq,
++static int apply_workqueue_attrs(struct workqueue_struct *wq,
+ 			  const struct workqueue_attrs *attrs)
+ {
+ 	int ret;
+@@ -3882,7 +3882,6 @@ int apply_workqueue_attrs(struct workque
+ 
+ 	return ret;
+ }
+-EXPORT_SYMBOL_GPL(apply_workqueue_attrs);
+ 
+ /**
+  * wq_update_unbound_numa - update NUMA affinity of a wq for CPU hot[un]plug
+@@ -3960,9 +3959,9 @@ static void wq_update_unbound_numa(struc
+ 
+ use_dfl_pwq:
+ 	mutex_lock(&wq->mutex);
+-	spin_lock_irq(&wq->dfl_pwq->pool->lock);
++	raw_spin_lock_irq(&wq->dfl_pwq->pool->lock);
+ 	get_pwq(wq->dfl_pwq);
+-	spin_unlock_irq(&wq->dfl_pwq->pool->lock);
++	raw_spin_unlock_irq(&wq->dfl_pwq->pool->lock);
+ 	old_pwq = numa_pwq_tbl_install(wq, node, wq->dfl_pwq);
+ out_unlock:
+ 	mutex_unlock(&wq->mutex);
+@@ -4081,7 +4080,7 @@ struct workqueue_struct *__alloc_workque
+ 		return NULL;
+ 
+ 	if (flags & WQ_UNBOUND) {
+-		wq->unbound_attrs = alloc_workqueue_attrs(GFP_KERNEL);
++		wq->unbound_attrs = alloc_workqueue_attrs();
+ 		if (!wq->unbound_attrs)
+ 			goto err_free_wq;
+ 	}
+@@ -4198,7 +4197,7 @@ void destroy_workqueue(struct workqueue_
  		 * The base ref is never dropped on per-cpu pwqs.  Directly
  		 * schedule RCU free.
  		 */
@@ -20838,7 +20834,7 @@
  	} else {
  		/*
  		 * We're the sole accessor of @wq at this point.  Directly
-@@ -4308,7 +4357,8 @@ bool workqueue_congested(int cpu, struct
+@@ -4308,7 +4307,8 @@ bool workqueue_congested(int cpu, struct
  	struct pool_workqueue *pwq;
  	bool ret;
  
@@ -20848,7 +20844,7 @@
  
  	if (cpu == WORK_CPU_UNBOUND)
  		cpu = smp_processor_id();
-@@ -4319,7 +4369,8 @@ bool workqueue_congested(int cpu, struct
+@@ -4319,7 +4319,8 @@ bool workqueue_congested(int cpu, struct
  		pwq = unbound_pwq_by_node(wq, cpu_to_node(cpu));
  
  	ret = !list_empty(&pwq->delayed_works);
@@ -20858,7 +20854,7 @@
  
  	return ret;
  }
-@@ -4345,15 +4396,15 @@ unsigned int work_busy(struct work_struc
+@@ -4345,15 +4346,15 @@ unsigned int work_busy(struct work_struc
  	if (work_pending(work))
  		ret |= WORK_BUSY_PENDING;
  
@@ -20867,18 +20863,18 @@
  	pool = get_work_pool(work);
  	if (pool) {
 -		spin_lock(&pool->lock);
-+		spin_lock_irqsave(&pool->lock, flags);
++		raw_spin_lock_irqsave(&pool->lock, flags);
  		if (find_worker_executing_work(pool, work))
  			ret |= WORK_BUSY_RUNNING;
 -		spin_unlock(&pool->lock);
-+		spin_unlock_irqrestore(&pool->lock, flags);
++		raw_spin_unlock_irqrestore(&pool->lock, flags);
  	}
 -	local_irq_restore(flags);
 +	rcu_read_unlock();
  
  	return ret;
  }
-@@ -4537,7 +4588,7 @@ void show_workqueue_state(void)
+@@ -4537,7 +4538,7 @@ void show_workqueue_state(void)
  	unsigned long flags;
  	int pi;
  
@@ -20887,7 +20883,38 @@
  
  	pr_info("Showing busy workqueues and worker pools:\n");
  
-@@ -4602,7 +4653,7 @@ void show_workqueue_state(void)
+@@ -4557,10 +4558,10 @@ void show_workqueue_state(void)
+ 		pr_info("workqueue %s: flags=0x%x\n", wq->name, wq->flags);
+ 
+ 		for_each_pwq(pwq, wq) {
+-			spin_lock_irqsave(&pwq->pool->lock, flags);
++			raw_spin_lock_irqsave(&pwq->pool->lock, flags);
+ 			if (pwq->nr_active || !list_empty(&pwq->delayed_works))
+ 				show_pwq(pwq);
+-			spin_unlock_irqrestore(&pwq->pool->lock, flags);
++			raw_spin_unlock_irqrestore(&pwq->pool->lock, flags);
+ 			/*
+ 			 * We could be printing a lot from atomic context, e.g.
+ 			 * sysrq-t -> show_workqueue_state(). Avoid triggering
+@@ -4574,7 +4575,7 @@ void show_workqueue_state(void)
+ 		struct worker *worker;
+ 		bool first = true;
+ 
+-		spin_lock_irqsave(&pool->lock, flags);
++		raw_spin_lock_irqsave(&pool->lock, flags);
+ 		if (pool->nr_workers == pool->nr_idle)
+ 			goto next_pool;
+ 
+@@ -4593,7 +4594,7 @@ void show_workqueue_state(void)
+ 		}
+ 		pr_cont("\n");
+ 	next_pool:
+-		spin_unlock_irqrestore(&pool->lock, flags);
++		raw_spin_unlock_irqrestore(&pool->lock, flags);
+ 		/*
+ 		 * We could be printing a lot from atomic context, e.g.
+ 		 * sysrq-t -> show_workqueue_state(). Avoid triggering
+@@ -4602,7 +4603,7 @@ void show_workqueue_state(void)
  		touch_nmi_watchdog();
  	}
  
@@ -20896,7 +20923,73 @@
  }
  
  /* used to show worker information through /proc/PID/{comm,stat,status} */
-@@ -4989,16 +5040,16 @@ bool freeze_workqueues_busy(void)
+@@ -4623,7 +4624,7 @@ void wq_worker_comm(char *buf, size_t si
+ 		struct worker_pool *pool = worker->pool;
+ 
+ 		if (pool) {
+-			spin_lock_irq(&pool->lock);
++			raw_spin_lock_irq(&pool->lock);
+ 			/*
+ 			 * ->desc tracks information (wq name or
+ 			 * set_worker_desc()) for the latest execution.  If
+@@ -4637,7 +4638,7 @@ void wq_worker_comm(char *buf, size_t si
+ 					scnprintf(buf + off, size - off, "-%s",
+ 						  worker->desc);
+ 			}
+-			spin_unlock_irq(&pool->lock);
++			raw_spin_unlock_irq(&pool->lock);
+ 		}
+ 	}
+ 
+@@ -4668,7 +4669,7 @@ static void unbind_workers(int cpu)
+ 
+ 	for_each_cpu_worker_pool(pool, cpu) {
+ 		mutex_lock(&wq_pool_attach_mutex);
+-		spin_lock_irq(&pool->lock);
++		raw_spin_lock_irq(&pool->lock);
+ 
+ 		/*
+ 		 * We've blocked all attach/detach operations. Make all workers
+@@ -4682,7 +4683,7 @@ static void unbind_workers(int cpu)
+ 
+ 		pool->flags |= POOL_DISASSOCIATED;
+ 
+-		spin_unlock_irq(&pool->lock);
++		raw_spin_unlock_irq(&pool->lock);
+ 		mutex_unlock(&wq_pool_attach_mutex);
+ 
+ 		/*
+@@ -4708,9 +4709,9 @@ static void unbind_workers(int cpu)
+ 		 * worker blocking could lead to lengthy stalls.  Kick off
+ 		 * unbound chain execution of currently pending work items.
+ 		 */
+-		spin_lock_irq(&pool->lock);
++		raw_spin_lock_irq(&pool->lock);
+ 		wake_up_worker(pool);
+-		spin_unlock_irq(&pool->lock);
++		raw_spin_unlock_irq(&pool->lock);
+ 	}
+ }
+ 
+@@ -4737,7 +4738,7 @@ static void rebind_workers(struct worker
+ 		WARN_ON_ONCE(set_cpus_allowed_ptr(worker->task,
+ 						  pool->attrs->cpumask) < 0);
+ 
+-	spin_lock_irq(&pool->lock);
++	raw_spin_lock_irq(&pool->lock);
+ 
+ 	pool->flags &= ~POOL_DISASSOCIATED;
+ 
+@@ -4776,7 +4777,7 @@ static void rebind_workers(struct worker
+ 		WRITE_ONCE(worker->flags, worker_flags);
+ 	}
+ 
+-	spin_unlock_irq(&pool->lock);
++	raw_spin_unlock_irq(&pool->lock);
+ }
+ 
+ /**
+@@ -4989,16 +4990,16 @@ bool freeze_workqueues_busy(void)
  		 * nr_active is monotonically decreasing.  It's safe
  		 * to peek without lock.
  		 */
@@ -20916,7 +21009,7 @@
  	}
  out_unlock:
  	mutex_unlock(&wq_pool_mutex);
-@@ -5193,7 +5244,8 @@ static ssize_t wq_pool_ids_show(struct d
+@@ -5193,7 +5194,8 @@ static ssize_t wq_pool_ids_show(struct d
  	const char *delim = "";
  	int node, written = 0;
  
@@ -20926,7 +21019,7 @@
  	for_each_node(node) {
  		written += scnprintf(buf + written, PAGE_SIZE - written,
  				     "%s%d:%d", delim, node,
-@@ -5201,7 +5253,8 @@ static ssize_t wq_pool_ids_show(struct d
+@@ -5201,7 +5203,8 @@ static ssize_t wq_pool_ids_show(struct d
  		delim = " ";
  	}
  	written += scnprintf(buf + written, PAGE_SIZE - written, "\n");
@@ -20936,6 +21029,42 @@
  
  	return written;
  }
+@@ -5226,7 +5229,7 @@ static struct workqueue_attrs *wq_sysfs_
+ 
+ 	lockdep_assert_held(&wq_pool_mutex);
+ 
+-	attrs = alloc_workqueue_attrs(GFP_KERNEL);
++	attrs = alloc_workqueue_attrs();
+ 	if (!attrs)
+ 		return NULL;
+ 
+@@ -5648,7 +5651,7 @@ static void __init wq_numa_init(void)
+ 		return;
+ 	}
+ 
+-	wq_update_unbound_numa_attrs_buf = alloc_workqueue_attrs(GFP_KERNEL);
++	wq_update_unbound_numa_attrs_buf = alloc_workqueue_attrs();
+ 	BUG_ON(!wq_update_unbound_numa_attrs_buf);
+ 
+ 	/*
+@@ -5723,7 +5726,7 @@ int __init workqueue_init_early(void)
+ 	for (i = 0; i < NR_STD_WORKER_POOLS; i++) {
+ 		struct workqueue_attrs *attrs;
+ 
+-		BUG_ON(!(attrs = alloc_workqueue_attrs(GFP_KERNEL)));
++		BUG_ON(!(attrs = alloc_workqueue_attrs()));
+ 		attrs->nice = std_nice[i];
+ 		unbound_std_wq_attrs[i] = attrs;
+ 
+@@ -5732,7 +5735,7 @@ int __init workqueue_init_early(void)
+ 		 * guaranteed by max_active which is enforced by pwqs.
+ 		 * Turn off NUMA so that dfl_pwq is used for all nodes.
+ 		 */
+-		BUG_ON(!(attrs = alloc_workqueue_attrs(GFP_KERNEL)));
++		BUG_ON(!(attrs = alloc_workqueue_attrs()));
+ 		attrs->nice = std_nice[i];
+ 		attrs->no_numa = true;
+ 		ordered_wq_attrs[i] = attrs;
 --- a/kernel/workqueue_internal.h
 +++ b/kernel/workqueue_internal.h
 @@ -44,6 +44,7 @@ struct worker {
@@ -21318,7 +21447,7 @@
 --- /dev/null
 +++ b/localversion-rt
 @@ -0,0 +1 @@
-+-rt25
++-rt26
 --- a/mm/Kconfig
 +++ b/mm/Kconfig
 @@ -377,7 +377,7 @@ config NOMMU_INITIAL_TRIM_EXCESS
@@ -21332,7 +21461,7 @@
  	help
 --- a/mm/compaction.c
 +++ b/mm/compaction.c
-@@ -1657,10 +1657,12 @@ check_drain:
+@@ -1668,10 +1668,12 @@ check_drain:
  				block_start_pfn(cc->migrate_pfn, cc->order);
  
  			if (cc->last_migrated_pfn < current_block_start) {
@@ -21563,7 +21692,7 @@
  	mutex_unlock(&percpu_charge_mutex);
  }
  
-@@ -4903,12 +4906,12 @@ static int mem_cgroup_move_account(struc
+@@ -4913,12 +4916,12 @@ static int mem_cgroup_move_account(struc
  
  	ret = 0;
  
@@ -21578,7 +21707,7 @@
  out_unlock:
  	unlock_page(page);
  out:
-@@ -6027,10 +6030,10 @@ void mem_cgroup_commit_charge(struct pag
+@@ -6037,10 +6040,10 @@ void mem_cgroup_commit_charge(struct pag
  
  	commit_charge(page, memcg, lrucare);
  
@@ -21591,7 +21720,7 @@
  
  	if (do_memsw_account() && PageSwapCache(page)) {
  		swp_entry_t entry = { .val = page_private(page) };
-@@ -6099,7 +6102,7 @@ static void uncharge_batch(const struct
+@@ -6109,7 +6112,7 @@ static void uncharge_batch(const struct
  		memcg_oom_recover(ug->memcg);
  	}
  
@@ -21600,7 +21729,7 @@
  	__mod_memcg_state(ug->memcg, MEMCG_RSS, -ug->nr_anon);
  	__mod_memcg_state(ug->memcg, MEMCG_CACHE, -ug->nr_file);
  	__mod_memcg_state(ug->memcg, MEMCG_RSS_HUGE, -ug->nr_huge);
-@@ -6107,7 +6110,7 @@ static void uncharge_batch(const struct
+@@ -6117,7 +6120,7 @@ static void uncharge_batch(const struct
  	__count_memcg_events(ug->memcg, PGPGOUT, ug->pgpgout);
  	__this_cpu_add(ug->memcg->stat_cpu->nr_page_events, nr_pages);
  	memcg_check_events(ug->memcg, ug->dummy_page);
@@ -21609,7 +21738,7 @@
  
  	if (!mem_cgroup_is_root(ug->memcg))
  		css_put_many(&ug->memcg->css, nr_pages);
-@@ -6270,10 +6273,10 @@ void mem_cgroup_migrate(struct page *old
+@@ -6280,10 +6283,10 @@ void mem_cgroup_migrate(struct page *old
  
  	commit_charge(newpage, memcg, false);
  
@@ -21622,7 +21751,7 @@
  }
  
  DEFINE_STATIC_KEY_FALSE(memcg_sockets_enabled_key);
-@@ -6465,6 +6468,7 @@ void mem_cgroup_swapout(struct page *pag
+@@ -6475,6 +6478,7 @@ void mem_cgroup_swapout(struct page *pag
  	struct mem_cgroup *memcg, *swap_memcg;
  	unsigned int nr_entries;
  	unsigned short oldid;
@@ -21630,7 +21759,7 @@
  
  	VM_BUG_ON_PAGE(PageLRU(page), page);
  	VM_BUG_ON_PAGE(page_count(page), page);
-@@ -6510,13 +6514,17 @@ void mem_cgroup_swapout(struct page *pag
+@@ -6520,13 +6524,17 @@ void mem_cgroup_swapout(struct page *pag
  	 * important here to have the interrupts disabled because it is the
  	 * only synchronisation we have for updating the per-CPU variables.
  	 */
@@ -24323,7 +24452,7 @@
  
  	sch->ops = ops;
  	sch->flags = ops->static_flags;
-@@ -987,7 +999,7 @@ void dev_deactivate_many(struct list_hea
+@@ -991,7 +1003,7 @@ void dev_deactivate_many(struct list_hea
  	/* Wait for outstanding qdisc_run calls. */
  	list_for_each_entry(dev, head, close_list) {
  		while (some_qdisc_is_busy(dev))
