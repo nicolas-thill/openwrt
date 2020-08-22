@@ -4427,7 +4427,7 @@
  }
 --- a/arch/arm64/Kconfig
 +++ b/arch/arm64/Kconfig
-@@ -103,6 +103,7 @@ config ARM64
+@@ -104,6 +104,7 @@ config ARM64
  	select HAVE_PERF_EVENTS
  	select HAVE_PERF_REGS
  	select HAVE_PERF_USER_STACK_DUMP
@@ -4623,7 +4623,7 @@
  
 --- a/arch/arm64/kernel/fpsimd.c
 +++ b/arch/arm64/kernel/fpsimd.c
-@@ -172,6 +172,7 @@ void fpsimd_flush_thread(void)
+@@ -173,6 +173,7 @@ void fpsimd_flush_thread(void)
  	if (!system_supports_fpsimd())
  		return;
  
@@ -4631,7 +4631,7 @@
  	local_bh_disable();
  
  	memset(&current->thread.fpsimd_state, 0, sizeof(struct fpsimd_state));
-@@ -179,6 +180,7 @@ void fpsimd_flush_thread(void)
+@@ -180,6 +181,7 @@ void fpsimd_flush_thread(void)
  	set_thread_flag(TIF_FOREIGN_FPSTATE);
  
  	local_bh_enable();
@@ -4639,7 +4639,7 @@
  }
  
  /*
-@@ -190,12 +192,14 @@ void fpsimd_preserve_current_state(void)
+@@ -191,12 +193,14 @@ void fpsimd_preserve_current_state(void)
  	if (!system_supports_fpsimd())
  		return;
  
@@ -4654,7 +4654,7 @@
  }
  
  /*
-@@ -208,6 +212,7 @@ void fpsimd_restore_current_state(void)
+@@ -209,6 +213,7 @@ void fpsimd_restore_current_state(void)
  	if (!system_supports_fpsimd())
  		return;
  
@@ -4662,7 +4662,7 @@
  	local_bh_disable();
  
  	if (test_and_clear_thread_flag(TIF_FOREIGN_FPSTATE)) {
-@@ -219,6 +224,7 @@ void fpsimd_restore_current_state(void)
+@@ -220,6 +225,7 @@ void fpsimd_restore_current_state(void)
  	}
  
  	local_bh_enable();
@@ -4670,7 +4670,7 @@
  }
  
  /*
-@@ -231,6 +237,7 @@ void fpsimd_update_current_state(struct
+@@ -232,6 +238,7 @@ void fpsimd_update_current_state(struct
  	if (!system_supports_fpsimd())
  		return;
  
@@ -4678,7 +4678,7 @@
  	local_bh_disable();
  
  	fpsimd_load_state(state);
-@@ -242,6 +249,7 @@ void fpsimd_update_current_state(struct
+@@ -243,6 +250,7 @@ void fpsimd_update_current_state(struct
  	}
  
  	local_bh_enable();
@@ -4686,7 +4686,7 @@
  }
  
  /*
-@@ -281,6 +289,7 @@ void kernel_neon_begin(void)
+@@ -282,6 +290,7 @@ void kernel_neon_begin(void)
  
  	BUG_ON(!may_use_simd());
  
@@ -4694,7 +4694,7 @@
  	local_bh_disable();
  
  	__this_cpu_write(kernel_neon_busy, true);
-@@ -295,6 +304,7 @@ void kernel_neon_begin(void)
+@@ -296,6 +305,7 @@ void kernel_neon_begin(void)
  	preempt_disable();
  
  	local_bh_enable();
@@ -4877,7 +4877,7 @@
  
  config GENERIC_LOCKBREAK
  	bool
-@@ -216,6 +217,7 @@ config PPC
+@@ -215,6 +216,7 @@ config PPC
  	select HAVE_HARDLOCKUP_DETECTOR_PERF	if PERF_EVENTS && HAVE_PERF_EVENTS_NMI && !HAVE_HARDLOCKUP_DETECTOR_ARCH
  	select HAVE_PERF_REGS
  	select HAVE_PERF_USER_STACK_DUMP
@@ -4885,7 +4885,7 @@
  	select HAVE_RCU_TABLE_FREE		if SMP
  	select HAVE_REGS_AND_STACK_ACCESS_API
  	select HAVE_SYSCALL_TRACEPOINTS
-@@ -396,7 +398,7 @@ menu "Kernel options"
+@@ -395,7 +397,7 @@ menu "Kernel options"
  
  config HIGHMEM
  	bool "High memory support"
@@ -6746,7 +6746,7 @@
  	 * This must be done before restoring TLS segments so
 --- a/arch/x86/kvm/lapic.c
 +++ b/arch/x86/kvm/lapic.c
-@@ -2143,7 +2143,7 @@ int kvm_create_lapic(struct kvm_vcpu *vc
+@@ -2141,7 +2141,7 @@ int kvm_create_lapic(struct kvm_vcpu *vc
  	apic->vcpu = vcpu;
  
  	hrtimer_init(&apic->lapic_timer.timer, CLOCK_MONOTONIC,
@@ -6757,7 +6757,7 @@
  	/*
 --- a/arch/x86/kvm/x86.c
 +++ b/arch/x86/kvm/x86.c
-@@ -6337,6 +6337,13 @@ int kvm_arch_init(void *opaque)
+@@ -6341,6 +6341,13 @@ int kvm_arch_init(void *opaque)
  		goto out;
  	}
  
@@ -10805,36 +10805,6 @@
 +	inode->__i_dir_seq = 0;
  	inode->i_rdev = 0;
  	inode->dirtied_when = 0;
- 
---- a/fs/libfs.c
-+++ b/fs/libfs.c
-@@ -90,7 +90,7 @@ static struct dentry *next_positive(stru
- 				    struct list_head *from,
- 				    int count)
- {
--	unsigned *seq = &parent->d_inode->i_dir_seq, n;
-+	unsigned *seq = &parent->d_inode->__i_dir_seq, n;
- 	struct dentry *res;
- 	struct list_head *p;
- 	bool skipped;
-@@ -123,8 +123,9 @@ retry:
- static void move_cursor(struct dentry *cursor, struct list_head *after)
- {
- 	struct dentry *parent = cursor->d_parent;
--	unsigned n, *seq = &parent->d_inode->i_dir_seq;
-+	unsigned n, *seq = &parent->d_inode->__i_dir_seq;
- 	spin_lock(&parent->d_lock);
-+	preempt_disable_rt();
- 	for (;;) {
- 		n = *seq;
- 		if (!(n & 1) && cmpxchg(seq, n, n + 1) == n)
-@@ -137,6 +138,7 @@ static void move_cursor(struct dentry *c
- 	else
- 		list_add_tail(&cursor->d_child, &parent->d_subdirs);
- 	smp_store_release(seq, n + 2);
-+	preempt_enable_rt();
- 	spin_unlock(&parent->d_lock);
- }
  
 --- a/fs/locks.c
 +++ b/fs/locks.c
@@ -20244,7 +20214,7 @@
 +#endif
 --- a/kernel/panic.c
 +++ b/kernel/panic.c
-@@ -486,9 +486,11 @@ static u64 oops_id;
+@@ -487,9 +487,11 @@ static u64 oops_id;
  
  static int init_oops_id(void)
  {
@@ -27650,7 +27620,7 @@
  		   tgid ? "     |    " : space);
  }
  
-@@ -4538,6 +4555,9 @@ static const char readme_msg[] =
+@@ -4551,6 +4568,9 @@ static const char readme_msg[] =
  #ifdef CONFIG_X86_64
  	"     x86-tsc:   TSC cycle counter\n"
  #endif
@@ -27660,7 +27630,7 @@
  	"\n  trace_marker\t\t- Writes into this file writes into the kernel buffer\n"
  	"\n  trace_marker_raw\t\t- Writes into this file writes binary data into the kernel buffer\n"
  	"  tracing_cpumask\t- Limit which CPUs to trace\n"
-@@ -4714,8 +4734,9 @@ static const char readme_msg[] =
+@@ -4727,8 +4747,9 @@ static const char readme_msg[] =
  	"\t            .sym        display an address as a symbol\n"
  	"\t            .sym-offset display an address as a symbol and offset\n"
  	"\t            .execname   display a common_pid as a program name\n"
@@ -27672,7 +27642,7 @@
  	"\t    The 'pause' parameter can be used to pause an existing hist\n"
  	"\t    trigger or to start a hist trigger but not log any events\n"
  	"\t    until told to do so.  'continue' can be used to start or\n"
-@@ -6224,7 +6245,7 @@ static int tracing_clock_show(struct seq
+@@ -6237,7 +6258,7 @@ static int tracing_clock_show(struct seq
  	return 0;
  }
  
@@ -27681,7 +27651,7 @@
  {
  	int i;
  
-@@ -6304,6 +6325,71 @@ static int tracing_clock_open(struct ino
+@@ -6317,6 +6338,71 @@ static int tracing_clock_open(struct ino
  	return ret;
  }
  
@@ -27753,7 +27723,7 @@
  struct ftrace_buffer_info {
  	struct trace_iterator	iter;
  	void			*spare;
-@@ -6553,6 +6639,13 @@ static const struct file_operations trac
+@@ -6566,6 +6652,13 @@ static const struct file_operations trac
  	.write		= tracing_clock_write,
  };
  
@@ -27767,7 +27737,7 @@
  #ifdef CONFIG_TRACER_SNAPSHOT
  static const struct file_operations snapshot_fops = {
  	.open		= tracing_snapshot_open,
-@@ -7696,6 +7789,7 @@ static int instance_mkdir(const char *na
+@@ -7709,6 +7802,7 @@ static int instance_mkdir(const char *na
  	struct trace_array *tr;
  	int ret;
  
@@ -27775,7 +27745,7 @@
  	mutex_lock(&trace_types_lock);
  
  	ret = -EEXIST;
-@@ -7728,6 +7822,7 @@ static int instance_mkdir(const char *na
+@@ -7741,6 +7835,7 @@ static int instance_mkdir(const char *na
  
  	INIT_LIST_HEAD(&tr->systems);
  	INIT_LIST_HEAD(&tr->events);
@@ -27783,7 +27753,7 @@
  
  	if (allocate_trace_buffers(tr, trace_buf_size) < 0)
  		goto out_free_tr;
-@@ -7751,6 +7846,7 @@ static int instance_mkdir(const char *na
+@@ -7764,6 +7859,7 @@ static int instance_mkdir(const char *na
  	list_add(&tr->list, &ftrace_trace_arrays);
  
  	mutex_unlock(&trace_types_lock);
@@ -27791,7 +27761,7 @@
  
  	return 0;
  
-@@ -7762,6 +7858,7 @@ static int instance_mkdir(const char *na
+@@ -7775,6 +7871,7 @@ static int instance_mkdir(const char *na
  
   out_unlock:
  	mutex_unlock(&trace_types_lock);
@@ -27799,7 +27769,7 @@
  
  	return ret;
  
-@@ -7774,6 +7871,7 @@ static int instance_rmdir(const char *na
+@@ -7787,6 +7884,7 @@ static int instance_rmdir(const char *na
  	int ret;
  	int i;
  
@@ -27807,7 +27777,7 @@
  	mutex_lock(&trace_types_lock);
  
  	ret = -ENODEV;
-@@ -7819,6 +7917,7 @@ static int instance_rmdir(const char *na
+@@ -7832,6 +7930,7 @@ static int instance_rmdir(const char *na
  
   out_unlock:
  	mutex_unlock(&trace_types_lock);
@@ -27815,7 +27785,7 @@
  
  	return ret;
  }
-@@ -7876,6 +7975,9 @@ init_tracer_tracefs(struct trace_array *
+@@ -7889,6 +7988,9 @@ init_tracer_tracefs(struct trace_array *
  	trace_create_file("tracing_on", 0644, d_tracer,
  			  tr, &rb_simple_fops);
  
@@ -27825,7 +27795,7 @@
  	create_trace_options_dir(tr);
  
  #if defined(CONFIG_TRACER_MAX_TRACE) || defined(CONFIG_HWLAT_TRACER)
-@@ -8283,6 +8385,92 @@ void ftrace_dump(enum ftrace_dump_mode o
+@@ -8296,6 +8398,92 @@ void ftrace_dump(enum ftrace_dump_mode o
  }
  EXPORT_SYMBOL_GPL(ftrace_dump);
  
@@ -27918,7 +27888,7 @@
  __init static int tracer_alloc_buffers(void)
  {
  	int ring_buf_size;
-@@ -8383,6 +8571,7 @@ __init static int tracer_alloc_buffers(v
+@@ -8396,6 +8584,7 @@ __init static int tracer_alloc_buffers(v
  
  	INIT_LIST_HEAD(&global_trace.systems);
  	INIT_LIST_HEAD(&global_trace.events);
@@ -33666,7 +33636,7 @@
  int event_enable_trigger_print(struct seq_file *m,
 --- a/kernel/trace/trace_hwlat.c
 +++ b/kernel/trace/trace_hwlat.c
-@@ -279,7 +279,7 @@ static void move_to_next_cpu(void)
+@@ -281,7 +281,7 @@ static void move_to_next_cpu(void)
  	 * of this thread, than stop migrating for the duration
  	 * of the current test.
  	 */
