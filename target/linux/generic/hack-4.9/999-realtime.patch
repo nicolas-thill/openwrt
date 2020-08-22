@@ -6103,36 +6103,6 @@
  	inode->i_rdev = 0;
  	inode->dirtied_when = 0;
  
---- a/fs/libfs.c
-+++ b/fs/libfs.c
-@@ -89,7 +89,7 @@ static struct dentry *next_positive(stru
- 				    struct list_head *from,
- 				    int count)
- {
--	unsigned *seq = &parent->d_inode->i_dir_seq, n;
-+	unsigned *seq = &parent->d_inode->__i_dir_seq, n;
- 	struct dentry *res;
- 	struct list_head *p;
- 	bool skipped;
-@@ -122,8 +122,9 @@ retry:
- static void move_cursor(struct dentry *cursor, struct list_head *after)
- {
- 	struct dentry *parent = cursor->d_parent;
--	unsigned n, *seq = &parent->d_inode->i_dir_seq;
-+	unsigned n, *seq = &parent->d_inode->__i_dir_seq;
- 	spin_lock(&parent->d_lock);
-+	preempt_disable_rt();
- 	for (;;) {
- 		n = *seq;
- 		if (!(n & 1) && cmpxchg(seq, n, n + 1) == n)
-@@ -136,6 +137,7 @@ static void move_cursor(struct dentry *c
- 	else
- 		list_add_tail(&cursor->d_child, &parent->d_subdirs);
- 	smp_store_release(seq, n + 2);
-+	preempt_enable_rt();
- 	spin_unlock(&parent->d_lock);
- }
- 
 --- a/fs/locks.c
 +++ b/fs/locks.c
 @@ -935,7 +935,7 @@ static int flock_lock_inode(struct inode
@@ -16668,7 +16638,7 @@
  
 --- a/kernel/panic.c
 +++ b/kernel/panic.c
-@@ -486,9 +486,11 @@ static u64 oops_id;
+@@ -487,9 +487,11 @@ static u64 oops_id;
  
  static int init_oops_id(void)
  {
@@ -18136,7 +18106,7 @@
  /*
   * Change a given task's CPU affinity. Migrate the thread to a
   * proper CPU and schedule it away if the CPU it's executing on
-@@ -1180,7 +1330,7 @@ static int __set_cpus_allowed_ptr(struct
+@@ -1181,7 +1331,7 @@ static int __set_cpus_allowed_ptr(struct
  	}
  
  	/* Can the task run on the task's current CPU? If so, we're done */
@@ -18144,7 +18114,7 @@
 +	if (cpumask_test_cpu(task_cpu(p), new_mask) || __migrate_disabled(p))
  		goto out;
  
- 	dest_cpu = cpumask_any_and(cpu_valid_mask, new_mask);
+ 	if (task_running(rq, p) || p->state == TASK_WAKING) {
 @@ -1367,6 +1517,18 @@ out:
  	return ret;
  }
@@ -21625,7 +21595,7 @@
  
  	return cmp_next_hrtimer_event(basem, expires);
  }
-@@ -1625,13 +1658,13 @@ void update_process_times(int user_tick)
+@@ -1627,13 +1660,13 @@ void update_process_times(int user_tick)
  
  	/* Note: this timer irq context must be accounted for as well. */
  	account_process_tick(p, user_tick);
@@ -21641,7 +21611,7 @@
  	run_posix_cpu_timers(p);
  }
  
-@@ -1647,7 +1680,7 @@ static inline void __run_timers(struct t
+@@ -1649,7 +1682,7 @@ static inline void __run_timers(struct t
  	if (!time_after_eq(jiffies, base->clk))
  		return;
  
@@ -21650,7 +21620,7 @@
  
  	/*
  	 * timer_base::must_forward_clk must be cleared before running
-@@ -1673,8 +1706,8 @@ static inline void __run_timers(struct t
+@@ -1675,8 +1708,8 @@ static inline void __run_timers(struct t
  		while (levels--)
  			expire_timers(base, heads + levels);
  	}
@@ -21661,7 +21631,7 @@
  }
  
  /*
-@@ -1684,6 +1717,8 @@ static __latent_entropy void run_timer_s
+@@ -1686,6 +1719,8 @@ static __latent_entropy void run_timer_s
  {
  	struct timer_base *base = this_cpu_ptr(&timer_bases[BASE_STD]);
  
@@ -21670,7 +21640,7 @@
  	__run_timers(base);
  	if (IS_ENABLED(CONFIG_NO_HZ_COMMON))
  		__run_timers(this_cpu_ptr(&timer_bases[BASE_DEF]));
-@@ -1884,8 +1919,8 @@ int timers_dead_cpu(unsigned int cpu)
+@@ -1886,8 +1921,8 @@ int timers_dead_cpu(unsigned int cpu)
  		 * The caller is globally serialized and nobody else
  		 * takes two locks at once, deadlock is not possible.
  		 */
@@ -21681,7 +21651,7 @@
  
  		/*
  		 * The current CPUs base clock might be stale. Update it
-@@ -1898,8 +1933,8 @@ int timers_dead_cpu(unsigned int cpu)
+@@ -1900,8 +1935,8 @@ int timers_dead_cpu(unsigned int cpu)
  		for (i = 0; i < WHEEL_SIZE; i++)
  			migrate_timer_list(new_base, old_base->vectors + i);
  
@@ -21692,7 +21662,7 @@
  		put_cpu_ptr(&timer_bases);
  	}
  	return 0;
-@@ -1915,8 +1950,11 @@ static void __init init_timer_cpu(int cp
+@@ -1917,8 +1952,11 @@ static void __init init_timer_cpu(int cp
  	for (i = 0; i < NR_BASES; i++) {
  		base = per_cpu_ptr(&timer_bases[i], cpu);
  		base->cpu = cpu;
