@@ -1,9 +1,9 @@
-4.9.178-rt131
+4.9.208-rt136
 
 --- /dev/null
 +++ b/source/localversion-rt
 @@ -0,0 +1 @@
-+-rt131
++-rt136
 --- a/Documentation/sysrq.txt
 +++ b/Documentation/sysrq.txt
 @@ -59,10 +59,17 @@ On PowerPC - Press 'ALT - Print Screen (
@@ -1220,7 +1220,7 @@
  			local_irq_enable();
 --- a/arch/mips/Kconfig
 +++ b/arch/mips/Kconfig
-@@ -2529,7 +2529,7 @@ config MIPS_ASID_BITS_VARIABLE
+@@ -2530,7 +2530,7 @@ config MIPS_ASID_BITS_VARIABLE
  #
  config HIGHMEM
  	bool "High Memory Support"
@@ -1371,7 +1371,7 @@
  	beq	restore_user
 --- a/arch/powerpc/kernel/entry_64.S
 +++ b/arch/powerpc/kernel/entry_64.S
-@@ -740,7 +740,7 @@ _GLOBAL(ret_from_except_lite)
+@@ -746,7 +746,7 @@ _GLOBAL(ret_from_except_lite)
  	bl	restore_math
  	b	restore
  #endif
@@ -1380,7 +1380,7 @@
  	beq	2f
  	bl	restore_interrupts
  	SCHEDULE_USER
-@@ -802,10 +802,18 @@ resume_kernel:
+@@ -808,10 +808,18 @@ resume_kernel:
  
  #ifdef CONFIG_PREEMPT
  	/* Check if we need to preempt */
@@ -1400,7 +1400,7 @@
  	cmpwi	cr1,r8,0
  	ld	r0,SOFTE(r1)
  	cmpdi	r0,0
-@@ -822,7 +830,7 @@ resume_kernel:
+@@ -828,7 +836,7 @@ resume_kernel:
  	/* Re-test flags and eventually loop */
  	CURRENT_THREAD_INFO(r9, r1)
  	ld	r4,TI_FLAGS(r9)
@@ -2573,18 +2573,6 @@
  
  /* --------------------------------------------------------------------------
                                Boot-time Configuration
---- a/arch/x86/kernel/apic/io_apic.c
-+++ b/arch/x86/kernel/apic/io_apic.c
-@@ -1713,7 +1713,8 @@ static bool io_apic_level_ack_pending(st
- static inline bool ioapic_irqd_mask(struct irq_data *data)
- {
- 	/* If we are moving the irq we need to mask it */
--	if (unlikely(irqd_is_setaffinity_pending(data))) {
-+	if (unlikely(irqd_is_setaffinity_pending(data) &&
-+		     !irqd_irq_inprogress(data))) {
- 		mask_ioapic_irq(data);
- 		return true;
- 	}
 --- a/arch/x86/kernel/asm-offsets.c
 +++ b/arch/x86/kernel/asm-offsets.c
 @@ -36,6 +36,7 @@ void common(void) {
@@ -2765,7 +2753,7 @@
  		return 1;
  	}
  	return 0;
-@@ -1788,7 +1815,7 @@ static void __mcheck_cpu_clear_vendor(st
+@@ -1758,7 +1785,7 @@ static void __mcheck_cpu_clear_vendor(st
  	}
  }
  
@@ -2774,7 +2762,7 @@
  {
  	unsigned long iv = check_interval * HZ;
  
-@@ -1797,16 +1824,17 @@ static void mce_start_timer(unsigned int
+@@ -1767,16 +1794,17 @@ static void mce_start_timer(unsigned int
  
  	per_cpu(mce_next_interval, cpu) = iv;
  
@@ -2796,7 +2784,7 @@
  	mce_start_timer(cpu, t);
  }
  
-@@ -2551,6 +2579,8 @@ static void mce_disable_cpu(void *h)
+@@ -2521,6 +2549,8 @@ static void mce_disable_cpu(void *h)
  	if (!mce_available(raw_cpu_ptr(&cpu_info)))
  		return;
  
@@ -2805,7 +2793,7 @@
  	if (!(action & CPU_TASKS_FROZEN))
  		cmci_clear();
  
-@@ -2573,6 +2603,7 @@ static void mce_reenable_cpu(void *h)
+@@ -2543,6 +2573,7 @@ static void mce_reenable_cpu(void *h)
  		if (b->init)
  			wrmsrl(msr_ops.ctl(i), b->ctl);
  	}
@@ -2813,7 +2801,7 @@
  }
  
  /* Get notified when a cpu comes on/off. Be hotplug friendly. */
-@@ -2580,7 +2611,6 @@ static int
+@@ -2550,7 +2581,6 @@ static int
  mce_cpu_callback(struct notifier_block *nfb, unsigned long action, void *hcpu)
  {
  	unsigned int cpu = (unsigned long)hcpu;
@@ -2821,7 +2809,7 @@
  
  	switch (action & ~CPU_TASKS_FROZEN) {
  	case CPU_ONLINE:
-@@ -2600,11 +2630,9 @@ mce_cpu_callback(struct notifier_block *
+@@ -2570,11 +2600,9 @@ mce_cpu_callback(struct notifier_block *
  		break;
  	case CPU_DOWN_PREPARE:
  		smp_call_function_single(cpu, mce_disable_cpu, &action, 1);
@@ -2833,7 +2821,7 @@
  		break;
  	}
  
-@@ -2643,6 +2671,10 @@ static __init int mcheck_init_device(voi
+@@ -2613,6 +2641,10 @@ static __init int mcheck_init_device(voi
  		goto err_out;
  	}
  
@@ -2950,7 +2938,7 @@
  	 * APIC is created enabled. This will prevent kvm_lapic_set_base from
 --- a/arch/x86/kvm/x86.c
 +++ b/arch/x86/kvm/x86.c
-@@ -6164,6 +6164,13 @@ int kvm_arch_init(void *opaque)
+@@ -6206,6 +6206,13 @@ int kvm_arch_init(void *opaque)
  		goto out;
  	}
  
@@ -4410,7 +4398,7 @@
  	  Support for K10 and newer processors is now in acpi-cpufreq.
 --- a/drivers/gpu/drm/i915/i915_gem_execbuffer.c
 +++ b/drivers/gpu/drm/i915/i915_gem_execbuffer.c
-@@ -1489,7 +1489,9 @@ execbuf_submit(struct i915_execbuffer_pa
+@@ -1531,7 +1531,9 @@ execbuf_submit(struct i915_execbuffer_pa
  	if (ret)
  		return ret;
  
@@ -4787,7 +4775,7 @@
  	}
 --- a/drivers/iommu/amd_iommu.c
 +++ b/drivers/iommu/amd_iommu.c
-@@ -1949,10 +1949,10 @@ static int __attach_device(struct iommu_
+@@ -1953,10 +1953,10 @@ static int __attach_device(struct iommu_
  	int ret;
  
  	/*
@@ -4801,7 +4789,7 @@
  
  	/* lock domain */
  	spin_lock(&domain->lock);
-@@ -2120,10 +2120,10 @@ static void __detach_device(struct iommu
+@@ -2124,10 +2124,10 @@ static void __detach_device(struct iommu
  	struct protection_domain *domain;
  
  	/*
@@ -4815,7 +4803,7 @@
  
  	if (WARN_ON(!dev_data->domain))
  		return;
-@@ -2309,7 +2309,7 @@ static void queue_add(struct dma_ops_dom
+@@ -2313,7 +2313,7 @@ static void queue_add(struct dma_ops_dom
  	pages     = __roundup_pow_of_two(pages);
  	address >>= PAGE_SHIFT;
  
@@ -4824,7 +4812,7 @@
  	spin_lock_irqsave(&queue->lock, flags);
  
  	if (queue->next == FLUSH_QUEUE_SIZE)
-@@ -2326,8 +2326,6 @@ static void queue_add(struct dma_ops_dom
+@@ -2330,8 +2330,6 @@ static void queue_add(struct dma_ops_dom
  
  	if (atomic_cmpxchg(&queue_timer_on, 0, 1) == 0)
  		mod_timer(&queue_timer, jiffies + msecs_to_jiffies(10));
@@ -5619,7 +5607,7 @@
  		spin_lock_irqsave(&port->lock, flags);
 --- a/drivers/tty/serial/amba-pl011.c
 +++ b/drivers/tty/serial/amba-pl011.c
-@@ -2215,13 +2215,19 @@ pl011_console_write(struct console *co,
+@@ -2213,13 +2213,19 @@ pl011_console_write(struct console *co,
  
  	clk_enable(uap->clk);
  
@@ -5642,7 +5630,7 @@
  
  	/*
  	 *	First save the CR then disable the interrupts
-@@ -2245,8 +2251,7 @@ pl011_console_write(struct console *co,
+@@ -2243,8 +2249,7 @@ pl011_console_write(struct console *co,
  		pl011_write(old_cr, uap, REG_CR);
  
  	if (locked)
@@ -6083,7 +6071,7 @@
  			if (data_page)
 --- a/fs/fuse/dir.c
 +++ b/fs/fuse/dir.c
-@@ -1192,7 +1192,7 @@ static int fuse_direntplus_link(struct f
+@@ -1202,7 +1202,7 @@ static int fuse_direntplus_link(struct f
  	struct inode *dir = d_inode(parent);
  	struct fuse_conn *fc;
  	struct inode *inode;
@@ -6291,7 +6279,7 @@
  	 * be set to match its requirements. So we must not load that until
 --- a/fs/nfs/delegation.c
 +++ b/fs/nfs/delegation.c
-@@ -150,11 +150,11 @@ again:
+@@ -160,11 +160,11 @@ again:
  		sp = state->owner;
  		/* Block nfs4_proc_unlck */
  		mutex_lock(&sp->so_delegreturn_mutex);
@@ -6299,7 +6287,7 @@
 +		seq = read_seqbegin(&sp->so_reclaim_seqlock);
  		err = nfs4_open_delegation_recall(ctx, state, stateid, type);
  		if (!err)
- 			err = nfs_delegation_claim_locks(ctx, state, stateid);
+ 			err = nfs_delegation_claim_locks(state, stateid);
 -		if (!err && read_seqcount_retry(&sp->so_reclaim_seqcount, seq))
 +		if (!err && read_seqretry(&sp->so_reclaim_seqlock, seq))
  			err = -EAGAIN;
@@ -6376,7 +6364,7 @@
  
 --- a/fs/nfs/nfs4proc.c
 +++ b/fs/nfs/nfs4proc.c
-@@ -2708,7 +2708,7 @@ static int _nfs4_open_and_get_state(stru
+@@ -2705,7 +2705,7 @@ static int _nfs4_open_and_get_state(stru
  	unsigned int seq;
  	int ret;
  
@@ -6385,7 +6373,7 @@
  
  	ret = _nfs4_proc_open(opendata);
  	if (ret != 0)
-@@ -2746,7 +2746,7 @@ static int _nfs4_open_and_get_state(stru
+@@ -2743,7 +2743,7 @@ static int _nfs4_open_and_get_state(stru
  
  	if (d_inode(dentry) == state->inode) {
  		nfs_inode_attach_open_context(ctx);
@@ -6770,7 +6758,7 @@
  		u64 fifo_time;
  	};
  
-@@ -468,6 +470,7 @@ struct request_queue {
+@@ -473,6 +475,7 @@ struct request_queue {
  #endif
  	struct rcu_head		rcu_head;
  	wait_queue_head_t	mq_freeze_wq;
@@ -6935,7 +6923,7 @@
  /**
 --- a/include/linux/cpu.h
 +++ b/include/linux/cpu.h
-@@ -195,6 +195,8 @@ extern void get_online_cpus(void);
+@@ -200,6 +200,8 @@ extern void get_online_cpus(void);
  extern void put_online_cpus(void);
  extern void cpu_hotplug_disable(void);
  extern void cpu_hotplug_enable(void);
@@ -6944,7 +6932,7 @@
  #define hotcpu_notifier(fn, pri)	cpu_notifier(fn, pri)
  #define __hotcpu_notifier(fn, pri)	__cpu_notifier(fn, pri)
  #define register_hotcpu_notifier(nb)	register_cpu_notifier(nb)
-@@ -212,6 +214,8 @@ static inline void cpu_hotplug_done(void
+@@ -217,6 +219,8 @@ static inline void cpu_hotplug_done(void
  #define put_online_cpus()	do { } while (0)
  #define cpu_hotplug_disable()	do { } while (0)
  #define cpu_hotplug_enable()	do { } while (0)
@@ -7173,7 +7161,7 @@
  /* Query timers: */
  extern ktime_t __hrtimer_get_remaining(const struct hrtimer *timer, bool adjust);
  
-@@ -436,9 +453,15 @@ static inline int hrtimer_is_queued(stru
+@@ -442,9 +459,15 @@ static inline bool hrtimer_is_queued(str
   * Helper function to check, whether the timer is running the callback
   * function
   */
@@ -8017,7 +8005,7 @@
  #include <linux/page-flags-layout.h>
  #include <linux/workqueue.h>
  #include <asm/page.h>
-@@ -513,6 +514,9 @@ struct mm_struct {
+@@ -518,6 +519,9 @@ struct mm_struct {
  	bool tlb_flush_batched;
  #endif
  	struct uprobes_state uprobes_state;
@@ -8218,7 +8206,7 @@
  	/*
  	 * Time (in jiffies) of last Tx
  	 */
-@@ -2487,14 +2503,53 @@ void netdev_freemem(struct net_device *d
+@@ -2492,14 +2508,53 @@ void netdev_freemem(struct net_device *d
  void synchronize_net(void);
  int init_dummy_netdev(struct net_device *dev);
  
@@ -8273,7 +8261,7 @@
  struct net_device *dev_get_by_index(struct net *net, int ifindex);
  struct net_device *__dev_get_by_index(struct net *net, int ifindex);
  struct net_device *dev_get_by_index_rcu(struct net *net, int ifindex);
-@@ -2879,6 +2934,7 @@ struct softnet_data {
+@@ -2884,6 +2939,7 @@ struct softnet_data {
  	unsigned int		dropped;
  	struct sk_buff_head	input_pkt_queue;
  	struct napi_struct	backlog;
@@ -8281,8 +8269,8 @@
  
  };
  
-@@ -3581,41 +3637,79 @@ static inline u32 netif_msg_init(int deb
- 	return (1 << debug_value) - 1;
+@@ -3586,41 +3642,79 @@ static inline u32 netif_msg_init(int deb
+ 	return (1U << debug_value) - 1;
  }
  
 +#ifdef CONFIG_PREEMPT_RT_FULL
@@ -10091,7 +10079,7 @@
  };
  
  struct sk_buff;
-@@ -1579,6 +1580,12 @@ static inline void skb_queue_head_init(s
+@@ -1580,6 +1581,12 @@ static inline void skb_queue_head_init(s
  	__skb_queue_head_init(list);
  }
  
@@ -10958,7 +10946,7 @@
  }
  
  static inline bool qdisc_may_bulk(const struct Qdisc *qdisc)
-@@ -308,7 +323,7 @@ static inline spinlock_t *qdisc_root_sle
+@@ -313,7 +328,7 @@ static inline spinlock_t *qdisc_root_sle
  	return qdisc_lock(root);
  }
  
@@ -11681,7 +11669,7 @@
  
  void get_online_cpus(void)
  {
-@@ -928,9 +1211,13 @@ static int takedown_cpu(unsigned int cpu
+@@ -929,9 +1212,13 @@ static int takedown_cpu(unsigned int cpu
  	struct cpuhp_cpu_state *st = per_cpu_ptr(&cpuhp_state, cpu);
  	int err;
  
@@ -11695,7 +11683,7 @@
  	/*
  	 * Prevent irq alloc/free while the dying cpu reorganizes the
  	 * interrupt affinities.
-@@ -1015,6 +1302,9 @@ static int __ref _cpu_down(unsigned int
+@@ -1016,6 +1303,9 @@ static int __ref _cpu_down(unsigned int
  	struct cpuhp_cpu_state *st = per_cpu_ptr(&cpuhp_state, cpu);
  	int prev_state, ret = 0;
  	bool hasdied = false;
@@ -11705,7 +11693,7 @@
  
  	if (num_online_cpus() == 1)
  		return -EBUSY;
-@@ -1022,7 +1312,34 @@ static int __ref _cpu_down(unsigned int
+@@ -1023,7 +1313,34 @@ static int __ref _cpu_down(unsigned int
  	if (!cpu_present(cpu))
  		return -EINVAL;
  
@@ -11740,7 +11728,7 @@
  
  	cpuhp_tasks_frozen = tasks_frozen;
  
-@@ -1061,10 +1378,15 @@ static int __ref _cpu_down(unsigned int
+@@ -1062,10 +1379,15 @@ static int __ref _cpu_down(unsigned int
  
  	hasdied = prev_state != st->state && st->state == CPUHP_OFFLINE;
  out:
@@ -11756,7 +11744,7 @@
  	arch_smt_update();
  	return ret;
  }
-@@ -1373,6 +1695,8 @@ core_initcall(cpu_hotplug_pm_sync_init);
+@@ -1374,6 +1696,8 @@ core_initcall(cpu_hotplug_pm_sync_init);
  
  #endif /* CONFIG_PM_SLEEP_SMP */
  
@@ -11765,7 +11753,7 @@
  #endif /* CONFIG_SMP */
  
  /* Boot processor state steps */
-@@ -2222,6 +2546,10 @@ void __init boot_cpu_init(void)
+@@ -2223,6 +2547,10 @@ void __init boot_cpu_init(void)
  	set_cpu_active(cpu, true);
  	set_cpu_present(cpu, true);
  	set_cpu_possible(cpu, true);
@@ -16843,7 +16831,7 @@
  #ifdef CONFIG_PRINTK
  DECLARE_WAIT_QUEUE_HEAD(log_wait);
  /* the next printk record to read by syslog(READ) or /proc/kmsg */
-@@ -1304,6 +1363,7 @@ static int syslog_print_all(char __user
+@@ -1310,6 +1369,7 @@ static int syslog_print_all(char __user
  {
  	char *text;
  	int len = 0;
@@ -16851,7 +16839,7 @@
  
  	text = kmalloc(LOG_LINE_MAX + PREFIX_MAX, GFP_KERNEL);
  	if (!text)
-@@ -1314,6 +1374,14 @@ static int syslog_print_all(char __user
+@@ -1320,6 +1380,14 @@ static int syslog_print_all(char __user
  		u64 next_seq;
  		u64 seq;
  		u32 idx;
@@ -16866,7 +16854,7 @@
  
  		/*
  		 * Find first record that fits, including all following records,
-@@ -1327,6 +1395,14 @@ static int syslog_print_all(char __user
+@@ -1333,6 +1401,14 @@ static int syslog_print_all(char __user
  			len += msg_print_text(msg, true, NULL, 0);
  			idx = log_next(idx);
  			seq++;
@@ -16881,7 +16869,7 @@
  		}
  
  		/* move first record forward until length fits into the buffer */
-@@ -1338,6 +1414,14 @@ static int syslog_print_all(char __user
+@@ -1344,6 +1420,14 @@ static int syslog_print_all(char __user
  			len -= msg_print_text(msg, true, NULL, 0);
  			idx = log_next(idx);
  			seq++;
@@ -16896,7 +16884,7 @@
  		}
  
  		/* last message fitting into this dump */
-@@ -1376,6 +1460,7 @@ static int syslog_print_all(char __user
+@@ -1382,6 +1466,7 @@ static int syslog_print_all(char __user
  		clear_seq = log_next_seq;
  		clear_idx = log_next_idx;
  	}
@@ -16904,7 +16892,7 @@
  	raw_spin_unlock_irq(&logbuf_lock);
  
  	kfree(text);
-@@ -1526,6 +1611,12 @@ static void call_console_drivers(int lev
+@@ -1532,6 +1617,12 @@ static void call_console_drivers(int lev
  	if (!console_drivers)
  		return;
  
@@ -16917,7 +16905,7 @@
  	for_each_console(con) {
  		if (exclusive_console && con != exclusive_console)
  			continue;
-@@ -1541,6 +1632,7 @@ static void call_console_drivers(int lev
+@@ -1547,6 +1638,7 @@ static void call_console_drivers(int lev
  		else
  			con->write(con, text, len);
  	}
@@ -16925,7 +16913,7 @@
  }
  
  /*
-@@ -1738,6 +1830,13 @@ asmlinkage int vprintk_emit(int facility
+@@ -1744,6 +1836,13 @@ asmlinkage int vprintk_emit(int facility
  	/* cpu currently holding logbuf_lock in this function */
  	static unsigned int logbuf_cpu = UINT_MAX;
  
@@ -16939,7 +16927,7 @@
  	if (level == LOGLEVEL_SCHED) {
  		level = LOGLEVEL_DEFAULT;
  		in_sched = true;
-@@ -1842,13 +1941,23 @@ asmlinkage int vprintk_emit(int facility
+@@ -1848,13 +1947,23 @@ asmlinkage int vprintk_emit(int facility
  
  	/* If called from the scheduler, we can not call up(). */
  	if (!in_sched) {
@@ -16964,7 +16952,7 @@
  			console_unlock();
  		lockdep_on();
  	}
-@@ -1969,26 +2078,6 @@ DEFINE_PER_CPU(printk_func_t, printk_fun
+@@ -1975,26 +2084,6 @@ DEFINE_PER_CPU(printk_func_t, printk_fun
  
  #endif /* CONFIG_PRINTK */
  
@@ -16991,7 +16979,7 @@
  static int __add_preferred_console(char *name, int idx, char *options,
  				   char *brl_options)
  {
-@@ -2258,11 +2347,16 @@ static void console_cont_flush(char *tex
+@@ -2264,11 +2353,16 @@ static void console_cont_flush(char *tex
  		goto out;
  
  	len = cont_print_text(text, size);
@@ -17008,7 +16996,7 @@
  	return;
  out:
  	raw_spin_unlock_irqrestore(&logbuf_lock, flags);
-@@ -2386,13 +2480,17 @@ skip:
+@@ -2392,13 +2486,17 @@ skip:
  		}
  		console_idx = log_next(console_idx);
  		console_seq++;
@@ -17027,7 +17015,7 @@
  		if (do_cond_resched)
  			cond_resched();
  	}
-@@ -2444,6 +2542,11 @@ void console_unblank(void)
+@@ -2450,6 +2548,11 @@ void console_unblank(void)
  {
  	struct console *c;
  
@@ -18829,7 +18817,7 @@
  }
  
  static __always_inline
-@@ -4561,7 +4561,7 @@ static void hrtick_start_fair(struct rq
+@@ -4569,7 +4569,7 @@ static void hrtick_start_fair(struct rq
  
  		if (delta < 0) {
  			if (rq->curr == p)
@@ -18838,7 +18826,7 @@
  			return;
  		}
  		hrtick_start(rq, delta);
-@@ -5929,7 +5929,7 @@ static void check_preempt_wakeup(struct
+@@ -5937,7 +5937,7 @@ static void check_preempt_wakeup(struct
  	return;
  
  preempt:
@@ -18847,7 +18835,7 @@
  	/*
  	 * Only set the backward buddy when the current task is still
  	 * on the rq. This can happen when a wakeup gets interleaved
-@@ -8656,7 +8656,7 @@ static void task_fork_fair(struct task_s
+@@ -8673,7 +8673,7 @@ static void task_fork_fair(struct task_s
  		 * 'current' within the tree based on its new key value.
  		 */
  		swap(curr->vruntime, se->vruntime);
@@ -18856,7 +18844,7 @@
  	}
  
  	se->vruntime -= cfs_rq->min_vruntime;
-@@ -8680,7 +8680,7 @@ prio_changed_fair(struct rq *rq, struct
+@@ -8697,7 +8697,7 @@ prio_changed_fair(struct rq *rq, struct
  	 */
  	if (rq->curr == p) {
  		if (p->prio > oldprio)
@@ -19152,7 +19140,7 @@
  #include <linux/fs.h>
  #include <linux/tty.h>
  #include <linux/binfmts.h>
-@@ -354,13 +355,30 @@ static bool task_participate_group_stop(
+@@ -358,13 +359,30 @@ static bool task_participate_group_stop(
  	return false;
  }
  
@@ -19184,7 +19172,7 @@
  {
  	struct sigqueue *q = NULL;
  	struct user_struct *user;
-@@ -377,7 +395,10 @@ __sigqueue_alloc(int sig, struct task_st
+@@ -381,7 +399,10 @@ __sigqueue_alloc(int sig, struct task_st
  	if (override_rlimit ||
  	    atomic_read(&user->sigpending) <=
  			task_rlimit(t, RLIMIT_SIGPENDING)) {
@@ -19196,7 +19184,7 @@
  	} else {
  		print_dropped_signal(sig);
  	}
-@@ -394,6 +415,13 @@ __sigqueue_alloc(int sig, struct task_st
+@@ -398,6 +419,13 @@ __sigqueue_alloc(int sig, struct task_st
  	return q;
  }
  
@@ -19210,7 +19198,7 @@
  static void __sigqueue_free(struct sigqueue *q)
  {
  	if (q->flags & SIGQUEUE_PREALLOC)
-@@ -403,6 +431,21 @@ static void __sigqueue_free(struct sigqu
+@@ -407,6 +435,21 @@ static void __sigqueue_free(struct sigqu
  	kmem_cache_free(sigqueue_cachep, q);
  }
  
@@ -19232,7 +19220,7 @@
  void flush_sigqueue(struct sigpending *queue)
  {
  	struct sigqueue *q;
-@@ -416,6 +459,21 @@ void flush_sigqueue(struct sigpending *q
+@@ -420,6 +463,21 @@ void flush_sigqueue(struct sigpending *q
  }
  
  /*
@@ -19254,7 +19242,7 @@
   * Flush all pending signals for this kthread.
   */
  void flush_signals(struct task_struct *t)
-@@ -534,7 +592,7 @@ still_pending:
+@@ -538,7 +596,7 @@ still_pending:
  			(info->si_code == SI_TIMER) &&
  			(info->si_sys_private);
  
@@ -19263,7 +19251,7 @@
  	} else {
  		/*
  		 * Ok, it wasn't in the queue.  This must be
-@@ -570,6 +628,8 @@ int dequeue_signal(struct task_struct *t
+@@ -574,6 +632,8 @@ int dequeue_signal(struct task_struct *t
  	bool resched_timer = false;
  	int signr;
  
@@ -19272,7 +19260,7 @@
  	/* We only dequeue private signals from ourselves, we don't let
  	 * signalfd steal them
  	 */
-@@ -1208,8 +1268,8 @@ int do_send_sig_info(int sig, struct sig
+@@ -1212,8 +1272,8 @@ int do_send_sig_info(int sig, struct sig
   * We don't want to have recursive SIGSEGV's etc, for example,
   * that is why we also clear SIGNAL_UNKILLABLE.
   */
@@ -19283,7 +19271,7 @@
  {
  	unsigned long int flags;
  	int ret, blocked, ignored;
-@@ -1234,6 +1294,39 @@ force_sig_info(int sig, struct siginfo *
+@@ -1238,6 +1298,39 @@ force_sig_info(int sig, struct siginfo *
  	return ret;
  }
  
@@ -19323,7 +19311,7 @@
  /*
   * Nuke all other threads in the group.
   */
-@@ -1268,12 +1361,12 @@ struct sighand_struct *__lock_task_sigha
+@@ -1272,12 +1365,12 @@ struct sighand_struct *__lock_task_sigha
  		 * Disable interrupts early to avoid deadlocks.
  		 * See rcu_read_unlock() comment header for details.
  		 */
@@ -19338,7 +19326,7 @@
  			break;
  		}
  		/*
-@@ -1294,7 +1387,7 @@ struct sighand_struct *__lock_task_sigha
+@@ -1298,7 +1391,7 @@ struct sighand_struct *__lock_task_sigha
  		}
  		spin_unlock(&sighand->siglock);
  		rcu_read_unlock();
@@ -19347,7 +19335,7 @@
  	}
  
  	return sighand;
-@@ -1541,7 +1634,8 @@ EXPORT_SYMBOL(kill_pid);
+@@ -1545,7 +1638,8 @@ EXPORT_SYMBOL(kill_pid);
   */
  struct sigqueue *sigqueue_alloc(void)
  {
@@ -19357,7 +19345,7 @@
  
  	if (q)
  		q->flags |= SIGQUEUE_PREALLOC;
-@@ -1902,15 +1996,7 @@ static void ptrace_stop(int exit_code, i
+@@ -1906,15 +2000,7 @@ static void ptrace_stop(int exit_code, i
  		if (gstop_done && ptrace_reparented(current))
  			do_notify_parent_cldstop(current, false, why);
  
@@ -20457,7 +20445,7 @@
  /*
   * enqueue_hrtimer - internal function to (re)start a timer
   *
-@@ -896,6 +944,11 @@ static void __remove_hrtimer(struct hrti
+@@ -898,6 +946,11 @@ static void __remove_hrtimer(struct hrti
  	if (!(state & HRTIMER_STATE_ENQUEUED))
  		return;
  
@@ -20469,7 +20457,7 @@
  	if (!timerqueue_del(&base->active, &timer->node))
  		cpu_base->active_bases &= ~(1 << base->index);
  
-@@ -991,7 +1044,16 @@ void hrtimer_start_range_ns(struct hrtim
+@@ -994,7 +1047,16 @@ void hrtimer_start_range_ns(struct hrtim
  	new_base = switch_hrtimer_base(timer, base, mode & HRTIMER_MODE_PINNED);
  
  	timer_stats_hrtimer_set_start_info(timer);
@@ -20486,7 +20474,7 @@
  	leftmost = enqueue_hrtimer(timer, new_base);
  	if (!leftmost)
  		goto unlock;
-@@ -1063,7 +1125,7 @@ int hrtimer_cancel(struct hrtimer *timer
+@@ -1066,7 +1128,7 @@ int hrtimer_cancel(struct hrtimer *timer
  
  		if (ret >= 0)
  			return ret;
@@ -20495,7 +20483,7 @@
  	}
  }
  EXPORT_SYMBOL_GPL(hrtimer_cancel);
-@@ -1144,6 +1206,7 @@ static void __hrtimer_init(struct hrtime
+@@ -1147,6 +1209,7 @@ static void __hrtimer_init(struct hrtime
  
  	base = hrtimer_clockid_to_base(clock_id);
  	timer->base = &cpu_base->clock_base[base];
@@ -20503,7 +20491,7 @@
  	timerqueue_init(&timer->node);
  
  #ifdef CONFIG_TIMER_STATS
-@@ -1184,6 +1247,7 @@ bool hrtimer_active(const struct hrtimer
+@@ -1187,6 +1250,7 @@ bool hrtimer_active(const struct hrtimer
  		seq = raw_read_seqcount_begin(&cpu_base->seq);
  
  		if (timer->state != HRTIMER_STATE_INACTIVE ||
@@ -20511,7 +20499,7 @@
  		    cpu_base->running == timer)
  			return true;
  
-@@ -1282,10 +1346,112 @@ static void __run_hrtimer(struct hrtimer
+@@ -1285,10 +1349,112 @@ static void __run_hrtimer(struct hrtimer
  	cpu_base->running = NULL;
  }
  
@@ -20625,7 +20613,7 @@
  
  	for (; active; base++, active >>= 1) {
  		struct timerqueue_node *node;
-@@ -1301,6 +1467,15 @@ static void __hrtimer_run_queues(struct
+@@ -1304,6 +1470,15 @@ static void __hrtimer_run_queues(struct
  
  			timer = container_of(node, struct hrtimer, node);
  
@@ -20641,7 +20629,7 @@
  			/*
  			 * The immediate goal for using the softexpires is
  			 * minimizing wakeups, not running timers at the
-@@ -1316,9 +1491,13 @@ static void __hrtimer_run_queues(struct
+@@ -1319,9 +1494,13 @@ static void __hrtimer_run_queues(struct
  			if (basenow.tv64 < hrtimer_get_softexpires_tv64(timer))
  				break;
  
@@ -20656,7 +20644,7 @@
  }
  
  #ifdef CONFIG_HIGH_RES_TIMERS
-@@ -1332,6 +1511,7 @@ void hrtimer_interrupt(struct clock_even
+@@ -1335,6 +1514,7 @@ void hrtimer_interrupt(struct clock_even
  	struct hrtimer_cpu_base *cpu_base = this_cpu_ptr(&hrtimer_bases);
  	ktime_t expires_next, now, entry_time, delta;
  	int retries = 0;
@@ -20664,7 +20652,7 @@
  
  	BUG_ON(!cpu_base->hres_active);
  	cpu_base->nr_events++;
-@@ -1350,7 +1530,7 @@ retry:
+@@ -1353,7 +1533,7 @@ retry:
  	 */
  	cpu_base->expires_next.tv64 = KTIME_MAX;
  
@@ -20673,7 +20661,7 @@
  
  	/* Reevaluate the clock bases for the next expiry */
  	expires_next = __hrtimer_get_next_event(cpu_base);
-@@ -1361,6 +1541,8 @@ retry:
+@@ -1364,6 +1544,8 @@ retry:
  	cpu_base->expires_next = expires_next;
  	cpu_base->in_hrtirq = 0;
  	raw_spin_unlock(&cpu_base->lock);
@@ -20682,7 +20670,7 @@
  
  	/* Reprogramming necessary ? */
  	if (!tick_program_event(expires_next, 0)) {
-@@ -1440,6 +1622,7 @@ void hrtimer_run_queues(void)
+@@ -1443,6 +1625,7 @@ void hrtimer_run_queues(void)
  {
  	struct hrtimer_cpu_base *cpu_base = this_cpu_ptr(&hrtimer_bases);
  	ktime_t now;
@@ -20690,7 +20678,7 @@
  
  	if (__hrtimer_hres_active(cpu_base))
  		return;
-@@ -1458,8 +1641,10 @@ void hrtimer_run_queues(void)
+@@ -1461,8 +1644,10 @@ void hrtimer_run_queues(void)
  
  	raw_spin_lock(&cpu_base->lock);
  	now = hrtimer_update_base(cpu_base);
@@ -20702,7 +20690,7 @@
  }
  
  /*
-@@ -1481,16 +1666,18 @@ static enum hrtimer_restart hrtimer_wake
+@@ -1484,16 +1669,18 @@ static enum hrtimer_restart hrtimer_wake
  void hrtimer_init_sleeper(struct hrtimer_sleeper *sl, struct task_struct *task)
  {
  	sl->timer.function = hrtimer_wakeup;
@@ -20723,7 +20711,7 @@
  		hrtimer_start_expires(&t->timer, mode);
  
  		if (likely(t->task))
-@@ -1532,7 +1719,8 @@ long __sched hrtimer_nanosleep_restart(s
+@@ -1535,7 +1722,8 @@ long __sched hrtimer_nanosleep_restart(s
  				HRTIMER_MODE_ABS);
  	hrtimer_set_expires_tv64(&t.timer, restart->nanosleep.expires);
  
@@ -20733,7 +20721,7 @@
  		goto out;
  
  	rmtp = restart->nanosleep.rmtp;
-@@ -1549,8 +1737,10 @@ out:
+@@ -1552,8 +1740,10 @@ out:
  	return ret;
  }
  
@@ -20746,7 +20734,7 @@
  {
  	struct restart_block *restart;
  	struct hrtimer_sleeper t;
-@@ -1563,7 +1753,7 @@ long hrtimer_nanosleep(struct timespec *
+@@ -1566,7 +1756,7 @@ long hrtimer_nanosleep(struct timespec *
  
  	hrtimer_init_on_stack(&t.timer, clockid, mode);
  	hrtimer_set_expires_range_ns(&t.timer, timespec_to_ktime(*rqtp), slack);
@@ -20755,7 +20743,7 @@
  		goto out;
  
  	/* Absolute timers do not update the rmtp value and restart: */
-@@ -1590,6 +1780,12 @@ out:
+@@ -1593,6 +1783,12 @@ out:
  	return ret;
  }
  
@@ -20768,7 +20756,7 @@
  SYSCALL_DEFINE2(nanosleep, struct timespec __user *, rqtp,
  		struct timespec __user *, rmtp)
  {
-@@ -1604,6 +1800,26 @@ SYSCALL_DEFINE2(nanosleep, struct timesp
+@@ -1607,6 +1803,26 @@ SYSCALL_DEFINE2(nanosleep, struct timesp
  	return hrtimer_nanosleep(&tu, rmtp, HRTIMER_MODE_REL, CLOCK_MONOTONIC);
  }
  
@@ -20795,7 +20783,7 @@
  /*
   * Functions related to boot-time initialization:
   */
-@@ -1615,17 +1831,21 @@ int hrtimers_prepare_cpu(unsigned int cp
+@@ -1618,17 +1834,21 @@ int hrtimers_prepare_cpu(unsigned int cp
  	for (i = 0; i < HRTIMER_MAX_CLOCK_BASES; i++) {
  		cpu_base->clock_base[i].cpu_base = cpu_base;
  		timerqueue_init_head(&cpu_base->clock_base[i].active);
@@ -20818,7 +20806,7 @@
  				struct hrtimer_clock_base *new_base)
  {
  	struct hrtimer *timer;
-@@ -1653,12 +1873,21 @@ static void migrate_hrtimer_list(struct
+@@ -1656,12 +1876,21 @@ static void migrate_hrtimer_list(struct
  		 */
  		enqueue_hrtimer(timer, new_base);
  	}
@@ -20841,7 +20829,7 @@
  
  	BUG_ON(cpu_online(scpu));
  	tick_cancel_sched_timer(scpu);
-@@ -1674,13 +1903,16 @@ int hrtimers_dead_cpu(unsigned int scpu)
+@@ -1677,13 +1906,16 @@ int hrtimers_dead_cpu(unsigned int scpu)
  	raw_spin_lock_nested(&old_base->lock, SINGLE_DEPTH_NESTING);
  
  	for (i = 0; i < HRTIMER_MAX_CLOCK_BASES; i++) {
@@ -20860,7 +20848,7 @@
  	/* Check, if we got expired work to do */
  	__hrtimer_peek_ahead_timers();
  	local_irq_enable();
-@@ -1689,9 +1921,26 @@ int hrtimers_dead_cpu(unsigned int scpu)
+@@ -1692,9 +1924,26 @@ int hrtimers_dead_cpu(unsigned int scpu)
  
  #endif /* CONFIG_HOTPLUG_CPU */
  
@@ -23723,7 +23711,7 @@
  	worker->flags |= WORKER_DIE;
  	wake_up_process(worker->task);
  }
-@@ -2781,14 +2819,14 @@ static bool start_flush_work(struct work
+@@ -2787,14 +2825,14 @@ static bool start_flush_work(struct work
  
  	might_sleep();
  
@@ -23741,7 +23729,7 @@
  	/* see the comment in try_to_grab_pending() with the same code */
  	pwq = get_work_pwq(work);
  	if (pwq) {
-@@ -2817,10 +2855,11 @@ static bool start_flush_work(struct work
+@@ -2823,10 +2861,11 @@ static bool start_flush_work(struct work
  	else
  		lock_map_acquire_read(&pwq->wq->lockdep_map);
  	lock_map_release(&pwq->wq->lockdep_map);
@@ -23754,7 +23742,7 @@
  	return false;
  }
  
-@@ -2907,7 +2946,7 @@ static bool __cancel_work_timer(struct w
+@@ -2913,7 +2952,7 @@ static bool __cancel_work_timer(struct w
  
  	/* tell other tasks trying to grab @work to back off */
  	mark_work_canceling(work);
@@ -23763,7 +23751,7 @@
  
  	flush_work(work);
  	clear_work_data(work);
-@@ -2962,10 +3001,10 @@ EXPORT_SYMBOL_GPL(cancel_work_sync);
+@@ -2968,10 +3007,10 @@ EXPORT_SYMBOL_GPL(cancel_work_sync);
   */
  bool flush_delayed_work(struct delayed_work *dwork)
  {
@@ -23776,7 +23764,7 @@
  	return flush_work(&dwork->work);
  }
  EXPORT_SYMBOL(flush_delayed_work);
-@@ -2983,7 +3022,7 @@ static bool __cancel_work(struct work_st
+@@ -2989,7 +3028,7 @@ static bool __cancel_work(struct work_st
  		return false;
  
  	set_work_pool_and_clear_pending(work, get_work_pool_id(work));
@@ -23785,7 +23773,7 @@
  	return ret;
  }
  
-@@ -3240,7 +3279,7 @@ static void rcu_free_pool(struct rcu_hea
+@@ -3246,7 +3285,7 @@ static void rcu_free_pool(struct rcu_hea
   * put_unbound_pool - put a worker_pool
   * @pool: worker_pool to put
   *
@@ -23794,7 +23782,7 @@
   * safe manner.  get_unbound_pool() calls this function on its failure path
   * and this function should be able to release pools which went through,
   * successfully or not, init_worker_pool().
-@@ -3294,8 +3333,8 @@ static void put_unbound_pool(struct work
+@@ -3300,8 +3339,8 @@ static void put_unbound_pool(struct work
  	del_timer_sync(&pool->idle_timer);
  	del_timer_sync(&pool->mayday_timer);
  
@@ -23805,7 +23793,7 @@
  }
  
  /**
-@@ -3402,14 +3441,14 @@ static void pwq_unbound_release_workfn(s
+@@ -3408,14 +3447,14 @@ static void pwq_unbound_release_workfn(s
  	put_unbound_pool(pool);
  	mutex_unlock(&wq_pool_mutex);
  
@@ -23822,7 +23810,7 @@
  }
  
  /**
-@@ -4073,7 +4112,7 @@ void destroy_workqueue(struct workqueue_
+@@ -4094,7 +4133,7 @@ void destroy_workqueue(struct workqueue_
  		 * The base ref is never dropped on per-cpu pwqs.  Directly
  		 * schedule RCU free.
  		 */
@@ -23831,7 +23819,7 @@
  	} else {
  		/*
  		 * We're the sole accessor of @wq at this point.  Directly
-@@ -4183,7 +4222,8 @@ bool workqueue_congested(int cpu, struct
+@@ -4204,7 +4243,8 @@ bool workqueue_congested(int cpu, struct
  	struct pool_workqueue *pwq;
  	bool ret;
  
@@ -23841,7 +23829,7 @@
  
  	if (cpu == WORK_CPU_UNBOUND)
  		cpu = smp_processor_id();
-@@ -4194,7 +4234,8 @@ bool workqueue_congested(int cpu, struct
+@@ -4215,7 +4255,8 @@ bool workqueue_congested(int cpu, struct
  		pwq = unbound_pwq_by_node(wq, cpu_to_node(cpu));
  
  	ret = !list_empty(&pwq->delayed_works);
@@ -23851,7 +23839,7 @@
  
  	return ret;
  }
-@@ -4220,15 +4261,15 @@ unsigned int work_busy(struct work_struc
+@@ -4241,15 +4282,15 @@ unsigned int work_busy(struct work_struc
  	if (work_pending(work))
  		ret |= WORK_BUSY_PENDING;
  
@@ -23871,7 +23859,7 @@
  
  	return ret;
  }
-@@ -4417,7 +4458,7 @@ void show_workqueue_state(void)
+@@ -4439,7 +4480,7 @@ void show_workqueue_state(void)
  	unsigned long flags;
  	int pi;
  
@@ -23880,7 +23868,7 @@
  
  	pr_info("Showing busy workqueues and worker pools:\n");
  
-@@ -4482,7 +4523,7 @@ void show_workqueue_state(void)
+@@ -4504,7 +4545,7 @@ void show_workqueue_state(void)
  		touch_nmi_watchdog();
  	}
  
@@ -23889,7 +23877,7 @@
  }
  
  /*
-@@ -4820,16 +4861,16 @@ bool freeze_workqueues_busy(void)
+@@ -4842,16 +4883,16 @@ bool freeze_workqueues_busy(void)
  		 * nr_active is monotonically decreasing.  It's safe
  		 * to peek without lock.
  		 */
@@ -23909,7 +23897,7 @@
  	}
  out_unlock:
  	mutex_unlock(&wq_pool_mutex);
-@@ -5019,7 +5060,8 @@ static ssize_t wq_pool_ids_show(struct d
+@@ -5041,7 +5082,8 @@ static ssize_t wq_pool_ids_show(struct d
  	const char *delim = "";
  	int node, written = 0;
  
@@ -23919,7 +23907,7 @@
  	for_each_node(node) {
  		written += scnprintf(buf + written, PAGE_SIZE - written,
  				     "%s%d:%d", delim, node,
-@@ -5027,7 +5069,8 @@ static ssize_t wq_pool_ids_show(struct d
+@@ -5049,7 +5091,8 @@ static ssize_t wq_pool_ids_show(struct d
  		delim = " ";
  	}
  	written += scnprintf(buf + written, PAGE_SIZE - written, "\n");
@@ -24476,10 +24464,6 @@
  
  	print_symbol("caller is %s\n", (long)__builtin_return_address(0));
  	dump_stack();
---- /dev/null
-+++ b/localversion-rt
-@@ -0,0 +1 @@
-+-rt131
 --- a/mm/Kconfig
 +++ b/mm/Kconfig
 @@ -410,7 +410,7 @@ config NOMMU_INITIAL_TRIM_EXCESS
@@ -26585,7 +26569,7 @@
  
  	net_rps_action_and_irq_enable(sd);
  }
-@@ -7227,7 +7261,7 @@ static void netdev_init_one_queue(struct
+@@ -7228,7 +7262,7 @@ static void netdev_init_one_queue(struct
  	/* Initialize queue lock */
  	spin_lock_init(&queue->_xmit_lock);
  	netdev_set_xmit_lockdep_class(&queue->_xmit_lock, dev->type);
@@ -26594,7 +26578,7 @@
  	netdev_queue_numa_node_write(queue, NUMA_NO_NODE);
  	queue->dev = dev;
  #ifdef CONFIG_BQL
-@@ -8162,16 +8196,20 @@ static int dev_cpu_callback(struct notif
+@@ -8163,16 +8197,20 @@ static int dev_cpu_callback(struct notif
  
  	raise_softirq_irqoff(NET_TX_SOFTIRQ);
  	local_irq_enable();
@@ -26616,7 +26600,7 @@
  
  	return NOTIFY_OK;
  }
-@@ -8478,8 +8516,9 @@ static int __init net_dev_init(void)
+@@ -8479,8 +8517,9 @@ static int __init net_dev_init(void)
  
  		INIT_WORK(flush, flush_backlog);
  
@@ -26916,7 +26900,7 @@
  }
  
  int sysctl_icmp_msgs_per_sec __read_mostly = 1000;
-@@ -358,6 +369,7 @@ static void icmp_push_reply(struct icmp_
+@@ -359,6 +370,7 @@ static void icmp_push_reply(struct icmp_
  	struct sock *sk;
  	struct sk_buff *skb;
  
@@ -26924,7 +26908,7 @@
  	sk = icmp_sk(dev_net((*rt)->dst.dev));
  	if (ip_append_data(sk, fl4, icmp_glue_bits, icmp_param,
  			   icmp_param->data_len+icmp_param->head_len,
-@@ -380,6 +392,7 @@ static void icmp_push_reply(struct icmp_
+@@ -381,6 +393,7 @@ static void icmp_push_reply(struct icmp_
  		skb->ip_summed = CHECKSUM_NONE;
  		ip_push_pending_frames(sk, fl4);
  	}
@@ -26932,7 +26916,7 @@
  }
  
  /*
-@@ -901,6 +914,30 @@ static bool icmp_redirect(struct sk_buff
+@@ -902,6 +915,30 @@ static bool icmp_redirect(struct sk_buff
  }
  
  /*
@@ -26963,7 +26947,7 @@
   *	Handle ICMP_ECHO ("ping") requests.
   *
   *	RFC 1122: 3.2.2.6 MUST have an echo server that answers ICMP echo
-@@ -927,6 +964,11 @@ static bool icmp_echo(struct sk_buff *sk
+@@ -928,6 +965,11 @@ static bool icmp_echo(struct sk_buff *sk
  		icmp_param.data_len	   = skb->len;
  		icmp_param.head_len	   = sizeof(struct icmphdr);
  		icmp_reply(&icmp_param, skb);
@@ -27084,7 +27068,7 @@
  #include <linux/kmod.h>
  #include <linux/slab.h>
  #include <linux/vmalloc.h>
-@@ -701,7 +702,7 @@ static void prb_retire_rx_blk_timer_expi
+@@ -702,7 +703,7 @@ static void prb_retire_rx_blk_timer_expi
  	if (BLOCK_NUM_PKTS(pbd)) {
  		while (atomic_read(&pkc->blk_fill_in_prog)) {
  			/* Waiting for skb_copy_bits to finish... */
@@ -27093,7 +27077,7 @@
  		}
  	}
  
-@@ -963,7 +964,7 @@ static void prb_retire_current_block(str
+@@ -964,7 +965,7 @@ static void prb_retire_current_block(str
  		if (!(status & TP_STATUS_BLK_TMO)) {
  			while (atomic_read(&pkc->blk_fill_in_prog)) {
  				/* Waiting for skb_copy_bits to finish... */
