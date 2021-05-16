@@ -6714,7 +6714,7 @@
  	/*
 --- a/arch/x86/kvm/x86.c
 +++ b/arch/x86/kvm/x86.c
-@@ -6375,6 +6375,13 @@ int kvm_arch_init(void *opaque)
+@@ -6380,6 +6380,13 @@ int kvm_arch_init(void *opaque)
  		goto out;
  	}
  
@@ -12736,7 +12736,7 @@
 +#endif
 --- a/include/linux/kthread.h
 +++ b/include/linux/kthread.h
-@@ -84,7 +84,7 @@ enum {
+@@ -87,7 +87,7 @@ enum {
  
  struct kthread_worker {
  	unsigned int		flags;
@@ -12745,7 +12745,7 @@
  	struct list_head	work_list;
  	struct list_head	delayed_work_list;
  	struct task_struct	*task;
-@@ -105,7 +105,7 @@ struct kthread_delayed_work {
+@@ -108,7 +108,7 @@ struct kthread_delayed_work {
  };
  
  #define KTHREAD_WORKER_INIT(worker)	{				\
@@ -12754,7 +12754,7 @@
  	.work_list = LIST_HEAD_INIT((worker).work_list),		\
  	.delayed_work_list = LIST_HEAD_INIT((worker).delayed_work_list),\
  	}
-@@ -199,4 +199,12 @@ bool kthread_cancel_delayed_work_sync(st
+@@ -202,4 +202,12 @@ bool kthread_cancel_delayed_work_sync(st
  
  void kthread_destroy_worker(struct kthread_worker *worker);
  
@@ -15232,7 +15232,7 @@
  };
  
  struct sk_buff;
-@@ -1717,6 +1718,12 @@ static inline void skb_queue_head_init(s
+@@ -1733,6 +1734,12 @@ static inline void skb_queue_head_init(s
  	__skb_queue_head_init(list);
  }
  
@@ -16887,7 +16887,7 @@
  #ifdef CONFIG_ARCH_HAS_SCALED_CPUTIME
 --- a/kernel/futex.c
 +++ b/kernel/futex.c
-@@ -963,7 +963,9 @@ static void exit_pi_state_list(struct ta
+@@ -980,7 +980,9 @@ static void exit_pi_state_list(struct ta
  		if (head->next != next) {
  			/* retain curr->pi_lock for the loop invariant */
  			raw_spin_unlock(&pi_state->pi_mutex.wait_lock);
@@ -16897,7 +16897,7 @@
  			put_pi_state(pi_state);
  			continue;
  		}
-@@ -1573,6 +1575,7 @@ static int wake_futex_pi(u32 __user *uad
+@@ -1591,6 +1593,7 @@ static int wake_futex_pi(u32 __user *uad
  	struct task_struct *new_owner;
  	bool postunlock = false;
  	DEFINE_WAKE_Q(wake_q);
@@ -16905,14 +16905,15 @@
  	int ret = 0;
  
  	new_owner = rt_mutex_next_owner(&pi_state->pi_mutex);
-@@ -1634,13 +1637,13 @@ static int wake_futex_pi(u32 __user *uad
- 	pi_state->owner = new_owner;
- 	raw_spin_unlock(&new_owner->pi_lock);
+@@ -1640,14 +1643,15 @@ static int wake_futex_pi(u32 __user *uad
+ 		 * not fail.
+ 		 */
+ 		pi_state_update_owner(pi_state, new_owner);
+-		postunlock = __rt_mutex_futex_unlock(&pi_state->pi_mutex, &wake_q);
++		postunlock = __rt_mutex_futex_unlock(&pi_state->pi_mutex, &wake_q,
++			&wake_sleeper_q);
+ 	}
  
--	postunlock = __rt_mutex_futex_unlock(&pi_state->pi_mutex, &wake_q);
--
-+	postunlock = __rt_mutex_futex_unlock(&pi_state->pi_mutex, &wake_q,
-+					     &wake_sleeper_q);
  out_unlock:
  	raw_spin_unlock_irq(&pi_state->pi_mutex.wait_lock);
  
@@ -16922,7 +16923,7 @@
  
  	return ret;
  }
-@@ -2264,6 +2267,16 @@ retry_private:
+@@ -2271,6 +2275,16 @@ retry_private:
  				requeue_pi_wake_futex(this, &key2, hb2);
  				drop_count++;
  				continue;
@@ -16939,7 +16940,7 @@
  			} else if (ret) {
  				/*
  				 * rt_mutex_start_proxy_lock() detected a
-@@ -2335,7 +2348,7 @@ static inline struct futex_hash_bucket *
+@@ -2342,7 +2356,7 @@ static inline struct futex_hash_bucket *
  
  	q->lock_ptr = &hb->lock;
  
@@ -16948,7 +16949,7 @@
  	return hb;
  }
  
-@@ -2831,10 +2844,9 @@ static int futex_wait(u32 __user *uaddr,
+@@ -2834,10 +2848,9 @@ static int futex_wait(u32 __user *uaddr,
  	if (abs_time) {
  		to = &timeout;
  
@@ -16962,7 +16963,7 @@
  		hrtimer_set_expires_range_ns(&to->timer, *abs_time,
  					     current->timer_slack_ns);
  	}
-@@ -2934,9 +2946,8 @@ static int futex_lock_pi(u32 __user *uad
+@@ -2936,9 +2949,8 @@ static int futex_lock_pi(u32 __user *uad
  
  	if (time) {
  		to = &timeout;
@@ -16974,7 +16975,7 @@
  		hrtimer_set_expires(&to->timer, *time);
  	}
  
-@@ -2999,7 +3010,7 @@ retry_private:
+@@ -3001,7 +3013,7 @@ retry_private:
  		goto no_block;
  	}
  
@@ -16983,7 +16984,7 @@
  
  	/*
  	 * On PREEMPT_RT_FULL, when hb->lock becomes an rt_mutex, we must not
-@@ -3015,6 +3026,14 @@ retry_private:
+@@ -3017,6 +3029,14 @@ retry_private:
  	 * before __rt_mutex_start_proxy_lock() is done.
  	 */
  	raw_spin_lock_irq(&q.pi_state->pi_mutex.wait_lock);
@@ -16998,7 +16999,7 @@
  	spin_unlock(q.lock_ptr);
  	/*
  	 * __rt_mutex_start_proxy_lock() unconditionally enqueues the @rt_waiter
-@@ -3023,6 +3042,7 @@ retry_private:
+@@ -3025,6 +3045,7 @@ retry_private:
  	 */
  	ret = __rt_mutex_start_proxy_lock(&q.pi_state->pi_mutex, &rt_waiter, current);
  	raw_spin_unlock_irq(&q.pi_state->pi_mutex.wait_lock);
@@ -17006,7 +17007,7 @@
  
  	if (ret) {
  		if (ret == 1)
-@@ -3171,10 +3191,19 @@ retry:
+@@ -3159,10 +3180,19 @@ retry:
  		 * rt_waiter. Also see the WARN in wake_futex_pi().
  		 */
  		raw_spin_lock_irq(&pi_state->pi_mutex.wait_lock);
@@ -17026,16 +17027,16 @@
  
  		put_pi_state(pi_state);
  
-@@ -3346,7 +3375,7 @@ static int futex_wait_requeue_pi(u32 __u
+@@ -3333,7 +3363,7 @@ static int futex_wait_requeue_pi(u32 __u
+ {
  	struct hrtimer_sleeper timeout, *to = NULL;
- 	struct futex_pi_state *pi_state = NULL;
  	struct rt_mutex_waiter rt_waiter;
 -	struct futex_hash_bucket *hb;
 +	struct futex_hash_bucket *hb, *hb2;
  	union futex_key key2 = FUTEX_KEY_INIT;
  	struct futex_q q = futex_q_init;
  	int res, ret;
-@@ -3362,10 +3391,9 @@ static int futex_wait_requeue_pi(u32 __u
+@@ -3349,10 +3379,9 @@ static int futex_wait_requeue_pi(u32 __u
  
  	if (abs_time) {
  		to = &timeout;
@@ -17049,7 +17050,7 @@
  		hrtimer_set_expires_range_ns(&to->timer, *abs_time,
  					     current->timer_slack_ns);
  	}
-@@ -3374,7 +3402,7 @@ static int futex_wait_requeue_pi(u32 __u
+@@ -3361,7 +3390,7 @@ static int futex_wait_requeue_pi(u32 __u
  	 * The waiter is allocated on our stack, manipulated by the requeue
  	 * code while we sleep on uaddr.
  	 */
@@ -17058,7 +17059,7 @@
  
  	ret = get_futex_key(uaddr2, flags & FLAGS_SHARED, &key2, VERIFY_WRITE);
  	if (unlikely(ret != 0))
-@@ -3405,20 +3433,55 @@ static int futex_wait_requeue_pi(u32 __u
+@@ -3392,20 +3421,55 @@ static int futex_wait_requeue_pi(u32 __u
  	/* Queue the futex_q, drop the hb lock, wait for wakeup. */
  	futex_wait_queue_me(hb, &q, to);
  
@@ -17125,7 +17126,7 @@
  
  	/* Check if the requeue code acquired the second futex for us. */
  	if (!q.rt_waiter) {
-@@ -3427,7 +3490,8 @@ static int futex_wait_requeue_pi(u32 __u
+@@ -3414,14 +3478,15 @@ static int futex_wait_requeue_pi(u32 __u
  		 * did a lock-steal - fix up the PI-state in that case.
  		 */
  		if (q.pi_state && (q.pi_state->owner != current)) {
@@ -17133,18 +17134,17 @@
 +			spin_lock(&hb2->lock);
 +			BUG_ON(&hb2->lock != q.lock_ptr);
  			ret = fixup_pi_state_owner(uaddr2, &q, current);
- 			if (ret && rt_mutex_owner(&q.pi_state->pi_mutex) == current) {
- 				pi_state = q.pi_state;
-@@ -3438,7 +3502,7 @@ static int futex_wait_requeue_pi(u32 __u
+ 			/*
+ 			 * Drop the reference to the pi state which
  			 * the requeue_pi() code acquired for us.
  			 */
  			put_pi_state(q.pi_state);
 -			spin_unlock(q.lock_ptr);
 +			spin_unlock(&hb2->lock);
- 		}
- 	} else {
- 		struct rt_mutex *pi_mutex;
-@@ -3452,7 +3516,8 @@ static int futex_wait_requeue_pi(u32 __u
+ 			/*
+ 			 * Adjust the return value. It's either -EFAULT or
+ 			 * success (1) but the caller expects 0 for success.
+@@ -3440,7 +3505,8 @@ static int futex_wait_requeue_pi(u32 __u
  		pi_mutex = &q.pi_state->pi_mutex;
  		ret = rt_mutex_wait_proxy_lock(pi_mutex, to, &rt_waiter);
  
@@ -17540,7 +17540,7 @@
  
 --- a/kernel/kthread.c
 +++ b/kernel/kthread.c
-@@ -579,7 +579,7 @@ void __kthread_init_worker(struct kthrea
+@@ -604,7 +604,7 @@ void __kthread_init_worker(struct kthrea
  				struct lock_class_key *key)
  {
  	memset(worker, 0, sizeof(struct kthread_worker));
@@ -17549,7 +17549,7 @@
  	lockdep_set_class_and_name(&worker->lock, key, name);
  	INIT_LIST_HEAD(&worker->work_list);
  	INIT_LIST_HEAD(&worker->delayed_work_list);
-@@ -621,21 +621,21 @@ repeat:
+@@ -646,21 +646,21 @@ repeat:
  
  	if (kthread_should_stop()) {
  		__set_current_state(TASK_RUNNING);
@@ -17575,7 +17575,7 @@
  
  	if (work) {
  		__set_current_state(TASK_RUNNING);
-@@ -792,12 +792,12 @@ bool kthread_queue_work(struct kthread_w
+@@ -817,12 +817,12 @@ bool kthread_queue_work(struct kthread_w
  	bool ret = false;
  	unsigned long flags;
  
@@ -17590,7 +17590,7 @@
  	return ret;
  }
  EXPORT_SYMBOL_GPL(kthread_queue_work);
-@@ -824,7 +824,7 @@ void kthread_delayed_work_timer_fn(unsig
+@@ -849,7 +849,7 @@ void kthread_delayed_work_timer_fn(unsig
  	if (WARN_ON_ONCE(!worker))
  		return;
  
@@ -17599,7 +17599,7 @@
  	/* Work must not be used with >1 worker, see kthread_queue_work(). */
  	WARN_ON_ONCE(work->worker != worker);
  
-@@ -834,7 +834,7 @@ void kthread_delayed_work_timer_fn(unsig
+@@ -859,7 +859,7 @@ void kthread_delayed_work_timer_fn(unsig
  	if (!work->canceling)
  		kthread_insert_work(worker, work, &worker->work_list);
  
@@ -17608,7 +17608,7 @@
  }
  EXPORT_SYMBOL(kthread_delayed_work_timer_fn);
  
-@@ -891,14 +891,14 @@ bool kthread_queue_delayed_work(struct k
+@@ -916,14 +916,14 @@ bool kthread_queue_delayed_work(struct k
  	unsigned long flags;
  	bool ret = false;
  
@@ -17625,7 +17625,7 @@
  	return ret;
  }
  EXPORT_SYMBOL_GPL(kthread_queue_delayed_work);
-@@ -934,7 +934,7 @@ void kthread_flush_work(struct kthread_w
+@@ -959,7 +959,7 @@ void kthread_flush_work(struct kthread_w
  	if (!worker)
  		return;
  
@@ -17634,7 +17634,7 @@
  	/* Work must not be used with >1 worker, see kthread_queue_work(). */
  	WARN_ON_ONCE(work->worker != worker);
  
-@@ -946,7 +946,7 @@ void kthread_flush_work(struct kthread_w
+@@ -971,7 +971,7 @@ void kthread_flush_work(struct kthread_w
  	else
  		noop = true;
  
@@ -17643,7 +17643,7 @@
  
  	if (!noop)
  		wait_for_completion(&fwork.done);
-@@ -979,9 +979,9 @@ static bool __kthread_cancel_work(struct
+@@ -1004,9 +1004,9 @@ static bool __kthread_cancel_work(struct
  		 * any queuing is blocked by setting the canceling counter.
  		 */
  		work->canceling++;
@@ -17655,7 +17655,7 @@
  		work->canceling--;
  	}
  
-@@ -1028,7 +1028,7 @@ bool kthread_mod_delayed_work(struct kth
+@@ -1053,7 +1053,7 @@ bool kthread_mod_delayed_work(struct kth
  	unsigned long flags;
  	int ret = false;
  
@@ -17664,7 +17664,7 @@
  
  	/* Do not bother with canceling when never queued. */
  	if (!work->worker)
-@@ -1045,7 +1045,7 @@ bool kthread_mod_delayed_work(struct kth
+@@ -1070,7 +1070,7 @@ bool kthread_mod_delayed_work(struct kth
  fast_queue:
  	__kthread_queue_delayed_work(worker, dwork, delay);
  out:
@@ -17673,7 +17673,7 @@
  	return ret;
  }
  EXPORT_SYMBOL_GPL(kthread_mod_delayed_work);
-@@ -1059,7 +1059,7 @@ static bool __kthread_cancel_work_sync(s
+@@ -1084,7 +1084,7 @@ static bool __kthread_cancel_work_sync(s
  	if (!worker)
  		goto out;
  
@@ -17682,7 +17682,7 @@
  	/* Work must not be used with >1 worker, see kthread_queue_work(). */
  	WARN_ON_ONCE(work->worker != worker);
  
-@@ -1073,13 +1073,13 @@ static bool __kthread_cancel_work_sync(s
+@@ -1098,13 +1098,13 @@ static bool __kthread_cancel_work_sync(s
  	 * In the meantime, block any queuing by setting the canceling counter.
  	 */
  	work->canceling++;
@@ -17699,7 +17699,7 @@
  out:
  	return ret;
  }
-@@ -1162,3 +1162,16 @@ void kthread_destroy_worker(struct kthre
+@@ -1187,3 +1187,16 @@ void kthread_destroy_worker(struct kthre
  	kfree(worker);
  }
  EXPORT_SYMBOL(kthread_destroy_worker);
@@ -19207,7 +19207,7 @@
  	debug_rt_mutex_proxy_lock(lock, proxy_owner);
  	rt_mutex_set_owner(lock, proxy_owner);
  }
-@@ -1726,6 +2334,26 @@ void rt_mutex_proxy_unlock(struct rt_mut
+@@ -1725,6 +2333,26 @@ void rt_mutex_proxy_unlock(struct rt_mut
  	rt_mutex_set_owner(lock, NULL);
  }
  
@@ -19234,7 +19234,7 @@
  /**
   * __rt_mutex_start_proxy_lock() - Start lock acquisition for another task
   * @lock:		the rt_mutex to take
-@@ -1756,6 +2384,34 @@ int __rt_mutex_start_proxy_lock(struct r
+@@ -1755,6 +2383,34 @@ int __rt_mutex_start_proxy_lock(struct r
  	if (try_to_take_rt_mutex(lock, task, NULL))
  		return 1;
  
@@ -19269,7 +19269,7 @@
  	/* We enforce deadlock detection for futexes */
  	ret = task_blocks_on_rt_mutex(lock, waiter, task,
  				      RT_MUTEX_FULL_CHAINWALK);
-@@ -1770,6 +2426,9 @@ int __rt_mutex_start_proxy_lock(struct r
+@@ -1769,6 +2425,9 @@ int __rt_mutex_start_proxy_lock(struct r
  		ret = 0;
  	}
  
@@ -19279,7 +19279,7 @@
  	debug_rt_mutex_print_deadlock(waiter);
  
  	return ret;
-@@ -1802,7 +2461,7 @@ int rt_mutex_start_proxy_lock(struct rt_
+@@ -1801,7 +2460,7 @@ int rt_mutex_start_proxy_lock(struct rt_
  
  	raw_spin_lock_irq(&lock->wait_lock);
  	ret = __rt_mutex_start_proxy_lock(lock, waiter, task);
@@ -19288,7 +19288,7 @@
  		remove_waiter(lock, waiter);
  	raw_spin_unlock_irq(&lock->wait_lock);
  
-@@ -1855,12 +2514,15 @@ int rt_mutex_wait_proxy_lock(struct rt_m
+@@ -1854,12 +2513,15 @@ int rt_mutex_wait_proxy_lock(struct rt_m
  	raw_spin_lock_irq(&lock->wait_lock);
  	/* sleep on the mutex */
  	set_current_state(TASK_INTERRUPTIBLE);
@@ -19305,7 +19305,7 @@
  	raw_spin_unlock_irq(&lock->wait_lock);
  
  	return ret;
-@@ -1922,3 +2584,99 @@ bool rt_mutex_cleanup_proxy_lock(struct
+@@ -1921,3 +2583,99 @@ bool rt_mutex_cleanup_proxy_lock(struct
  
  	return cleanup;
  }
@@ -19423,7 +19423,7 @@
  #ifdef CONFIG_DEBUG_RT_MUTEXES
  	unsigned long		ip;
  	struct pid		*deadlock_task_pid;
-@@ -129,12 +131,15 @@ enum rtmutex_chainwalk {
+@@ -129,11 +131,14 @@ enum rtmutex_chainwalk {
  /*
   * PI-futex support (proxy locking functions, etc.):
   */
@@ -19433,14 +19433,13 @@
  extern struct task_struct *rt_mutex_next_owner(struct rt_mutex *lock);
  extern void rt_mutex_init_proxy_locked(struct rt_mutex *lock,
  				       struct task_struct *proxy_owner);
- extern void rt_mutex_proxy_unlock(struct rt_mutex *lock,
- 				  struct task_struct *proxy_owner);
+ extern void rt_mutex_proxy_unlock(struct rt_mutex *lock);
 -extern void rt_mutex_init_waiter(struct rt_mutex_waiter *waiter);
 +extern void rt_mutex_init_waiter(struct rt_mutex_waiter *waiter, bool savetate);
  extern int __rt_mutex_start_proxy_lock(struct rt_mutex *lock,
  				     struct rt_mutex_waiter *waiter,
  				     struct task_struct *task);
-@@ -152,9 +157,27 @@ extern int __rt_mutex_futex_trylock(stru
+@@ -151,9 +156,27 @@ extern int __rt_mutex_futex_trylock(stru
  
  extern void rt_mutex_futex_unlock(struct rt_mutex *lock);
  extern bool __rt_mutex_futex_unlock(struct rt_mutex *lock,
@@ -38559,7 +38558,7 @@
  		      struct nlattr *opt)
  {
  	struct gnet_estimator *parm = nla_data(opt);
-@@ -222,7 +222,7 @@ int gen_replace_estimator(struct gnet_st
+@@ -225,7 +225,7 @@ int gen_replace_estimator(struct gnet_st
  			  struct gnet_stats_basic_cpu __percpu *cpu_bstats,
  			  struct net_rate_estimator __rcu **rate_est,
  			  spinlock_t *stats_lock,
@@ -38669,7 +38668,7 @@
  }
  
  void *napi_alloc_frag(unsigned int fragsz)
-@@ -413,13 +420,13 @@ struct sk_buff *__netdev_alloc_skb(struc
+@@ -417,13 +424,13 @@ struct sk_buff *__netdev_alloc_skb(struc
  	if (sk_memalloc_socks())
  		gfp_mask |= __GFP_MEMALLOC;
  
@@ -38685,19 +38684,15 @@
  
  	if (unlikely(!data))
  		return NULL;
-@@ -460,9 +467,10 @@ EXPORT_SYMBOL(__netdev_alloc_skb);
- struct sk_buff *__napi_alloc_skb(struct napi_struct *napi, unsigned int len,
- 				 gfp_t gfp_mask)
- {
--	struct napi_alloc_cache *nc = this_cpu_ptr(&napi_alloc_cache);
-+	struct napi_alloc_cache *nc;
+@@ -467,6 +474,7 @@ struct sk_buff *__napi_alloc_skb(struct
+ 	struct napi_alloc_cache *nc;
  	struct sk_buff *skb;
  	void *data;
 +	bool pfmemalloc;
  
  	len += NET_SKB_PAD + NET_IP_ALIGN;
  
-@@ -480,7 +488,10 @@ struct sk_buff *__napi_alloc_skb(struct
+@@ -489,7 +497,10 @@ struct sk_buff *__napi_alloc_skb(struct
  	if (sk_memalloc_socks())
  		gfp_mask |= __GFP_MEMALLOC;
  
@@ -38708,7 +38703,7 @@
  	if (unlikely(!data))
  		return NULL;
  
-@@ -491,7 +502,7 @@ struct sk_buff *__napi_alloc_skb(struct
+@@ -500,7 +511,7 @@ struct sk_buff *__napi_alloc_skb(struct
  	}
  
  	/* use OR instead of assignment to avoid clearing of bits in mask */
@@ -38717,7 +38712,7 @@
  		skb->pfmemalloc = 1;
  	skb->head_frag = 1;
  
-@@ -739,23 +750,26 @@ void __consume_stateless_skb(struct sk_b
+@@ -748,23 +759,26 @@ void __consume_stateless_skb(struct sk_b
  
  void __kfree_skb_flush(void)
  {
@@ -38746,7 +38741,7 @@
  	/* record skb to CPU local list */
  	nc->skb_cache[nc->skb_count++] = skb;
  
-@@ -770,6 +784,7 @@ static inline void _kfree_skb_defer(stru
+@@ -779,6 +793,7 @@ static inline void _kfree_skb_defer(stru
  				     nc->skb_cache);
  		nc->skb_count = 0;
  	}
@@ -38865,7 +38860,7 @@
  
 --- a/net/mac80211/rx.c
 +++ b/net/mac80211/rx.c
-@@ -4291,7 +4291,7 @@ void ieee80211_rx_napi(struct ieee80211_
+@@ -4293,7 +4293,7 @@ void ieee80211_rx_napi(struct ieee80211_
  	struct ieee80211_supported_band *sband;
  	struct ieee80211_rx_status *status = IEEE80211_SKB_RXCB(skb);
  
@@ -38957,7 +38952,7 @@
  #ifdef CONFIG_RXKAD
 --- a/net/sched/sch_api.c
 +++ b/net/sched/sch_api.c
-@@ -1081,7 +1081,7 @@ static struct Qdisc *qdisc_create(struct
+@@ -1082,7 +1082,7 @@ static struct Qdisc *qdisc_create(struct
  			rcu_assign_pointer(sch->stab, stab);
  		}
  		if (tca[TCA_RATE]) {
