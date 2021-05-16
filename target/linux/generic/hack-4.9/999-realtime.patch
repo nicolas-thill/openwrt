@@ -5447,7 +5447,7 @@
  static inline uint8_t *
 --- a/drivers/scsi/qla2xxx/qla_isr.c
 +++ b/drivers/scsi/qla2xxx/qla_isr.c
-@@ -3131,7 +3131,11 @@ qla24xx_enable_msix(struct qla_hw_data *
+@@ -3127,7 +3127,11 @@ qla24xx_enable_msix(struct qla_hw_data *
  		* kref_put().
  		*/
  		kref_get(&qentry->irq_notify.kref);
