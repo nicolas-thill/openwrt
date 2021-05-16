@@ -1,9 +1,9 @@
-4.14.209-rt101
+4.14.215-rt105
 
 --- /dev/null
 +++ b/source/localversion-rt
 @@ -0,0 +1 @@
-+-rt101
++-rt105
 --- a/Documentation/trace/events.txt
 +++ b/Documentation/trace/events.txt
 @@ -517,1550 +517,4 @@ The following commands are supported:
@@ -8395,7 +8395,7 @@
  			return;
 --- a/drivers/ide/ide-io.c
 +++ b/drivers/ide/ide-io.c
-@@ -660,7 +660,7 @@ void ide_timer_expiry (unsigned long dat
+@@ -655,7 +655,7 @@ void ide_timer_expiry (unsigned long dat
  		/* disable_irq_nosync ?? */
  		disable_irq(hwif->irq);
  		/* local CPU only, as if we were handling an interrupt */
@@ -10293,7 +10293,7 @@
  	atomic_dec(&urb->use_count);
 --- a/drivers/usb/gadget/function/f_fs.c
 +++ b/drivers/usb/gadget/function/f_fs.c
-@@ -1618,7 +1618,7 @@ static void ffs_data_put(struct ffs_data
+@@ -1621,7 +1621,7 @@ static void ffs_data_put(struct ffs_data
  		pr_info("%s(): freeing\n", __func__);
  		ffs_data_clear(ffs);
  		BUG_ON(waitqueue_active(&ffs->ev.waitq) ||
@@ -16652,7 +16652,7 @@
  
 --- a/kernel/cpu.c
 +++ b/kernel/cpu.c
-@@ -821,6 +821,15 @@ static int take_cpu_down(void *_param)
+@@ -825,6 +825,15 @@ static int take_cpu_down(void *_param)
  	int err, cpu = smp_processor_id();
  	int ret;
  
@@ -16668,7 +16668,7 @@
  	/* Ensure this CPU doesn't handle any more interrupts. */
  	err = __cpu_disable();
  	if (err < 0)
-@@ -848,6 +857,10 @@ static int take_cpu_down(void *_param)
+@@ -852,6 +861,10 @@ static int take_cpu_down(void *_param)
  	return 0;
  }
  
@@ -16679,7 +16679,7 @@
  static int takedown_cpu(unsigned int cpu)
  {
  	struct cpuhp_cpu_state *st = per_cpu_ptr(&cpuhp_state, cpu);
-@@ -862,11 +875,39 @@ static int takedown_cpu(unsigned int cpu
+@@ -866,11 +879,39 @@ static int takedown_cpu(unsigned int cpu
  	 */
  	irq_lock_sparse();
  
@@ -16719,7 +16719,7 @@
  		/* CPU refused to die */
  		irq_unlock_sparse();
  		/* Unpark the hotplug thread so we can rollback there */
-@@ -885,6 +926,9 @@ static int takedown_cpu(unsigned int cpu
+@@ -889,6 +930,9 @@ static int takedown_cpu(unsigned int cpu
  	wait_for_ap_thread(st, false);
  	BUG_ON(st->state != CPUHP_AP_IDLE_DEAD);
  
@@ -22679,7 +22679,7 @@
  	raw_spin_unlock_irqrestore(&p->pi_lock, flags);
  
  out_unlock:
-@@ -4880,6 +4997,7 @@ int __cond_resched_lock(spinlock_t *lock
+@@ -4876,6 +4993,7 @@ int __cond_resched_lock(spinlock_t *lock
  }
  EXPORT_SYMBOL(__cond_resched_lock);
  
@@ -22687,7 +22687,7 @@
  int __sched __cond_resched_softirq(void)
  {
  	BUG_ON(!in_softirq());
-@@ -4893,6 +5011,7 @@ int __sched __cond_resched_softirq(void)
+@@ -4889,6 +5007,7 @@ int __sched __cond_resched_softirq(void)
  	return 0;
  }
  EXPORT_SYMBOL(__cond_resched_softirq);
@@ -22695,7 +22695,7 @@
  
  /**
   * yield - yield the current processor to other threads.
-@@ -5288,7 +5407,9 @@ void init_idle(struct task_struct *idle,
+@@ -5284,7 +5403,9 @@ void init_idle(struct task_struct *idle,
  
  	/* Set the preempt count _outside_ the spinlocks! */
  	init_idle_preempt_count(idle, cpu);
@@ -22706,7 +22706,7 @@
  	/*
  	 * The idle tasks have their own, simple scheduling class:
  	 */
-@@ -5327,7 +5448,7 @@ int task_can_attach(struct task_struct *
+@@ -5323,7 +5444,7 @@ int task_can_attach(struct task_struct *
  	 * allowed nodes is unnecessary.  Thus, cpusets are not
  	 * applicable for such threads.  This prevents checking for
  	 * success of set_cpus_allowed_ptr() on all attached tasks
@@ -22715,7 +22715,7 @@
  	 */
  	if (p->flags & PF_NO_SETAFFINITY) {
  		ret = -EINVAL;
-@@ -5354,7 +5475,7 @@ int migrate_task_to(struct task_struct *
+@@ -5350,7 +5471,7 @@ int migrate_task_to(struct task_struct *
  	if (curr_cpu == target_cpu)
  		return 0;
  
@@ -22724,7 +22724,7 @@
  		return -EINVAL;
  
  	/* TODO: This is not properly updating schedstats */
-@@ -5393,6 +5514,8 @@ void sched_setnuma(struct task_struct *p
+@@ -5389,6 +5510,8 @@ void sched_setnuma(struct task_struct *p
  #endif /* CONFIG_NUMA_BALANCING */
  
  #ifdef CONFIG_HOTPLUG_CPU
@@ -22733,7 +22733,7 @@
  /*
   * Ensure that the idle task is using init_mm right before its CPU goes
   * offline.
-@@ -5407,7 +5530,12 @@ void idle_task_exit(void)
+@@ -5403,7 +5526,12 @@ void idle_task_exit(void)
  		switch_mm(mm, &init_mm, current);
  		finish_arch_post_lock_switch();
  	}
@@ -22747,7 +22747,7 @@
  }
  
  /*
-@@ -5490,8 +5618,10 @@ static void migrate_tasks(struct rq *dea
+@@ -5486,8 +5614,10 @@ static void migrate_tasks(struct rq *dea
  		BUG_ON(!next);
  		put_prev_task(rq, next);
  
@@ -22759,7 +22759,7 @@
  		 * both pi_lock and rq->lock, such that holding either
  		 * stabilizes the mask.
  		 *
-@@ -5725,6 +5855,10 @@ int sched_cpu_dying(unsigned int cpu)
+@@ -5721,6 +5851,10 @@ int sched_cpu_dying(unsigned int cpu)
  	update_max_interval();
  	nohz_balance_exit_idle(cpu);
  	hrtick_clear(rq);
@@ -22770,7 +22770,7 @@
  	return 0;
  }
  #endif
-@@ -5974,7 +6108,7 @@ void __init sched_init(void)
+@@ -5970,7 +6104,7 @@ void __init sched_init(void)
  #ifdef CONFIG_DEBUG_ATOMIC_SLEEP
  static inline int preempt_count_equals(int preempt_offset)
  {
@@ -22779,7 +22779,7 @@
  
  	return (nested == preempt_offset);
  }
-@@ -6769,3 +6903,171 @@ const u32 sched_prio_to_wmult[40] = {
+@@ -6765,3 +6899,171 @@ const u32 sched_prio_to_wmult[40] = {
   /*  10 */  39045157,  49367440,  61356676,  76695844,  95443717,
   /*  15 */ 119304647, 148102320, 186737708, 238609294, 286331153,
  };
@@ -23418,7 +23418,7 @@
  				     !task_on_rq_queued(task))) {
 --- a/kernel/sched/sched.h
 +++ b/kernel/sched/sched.h
-@@ -817,6 +817,10 @@ struct rq {
+@@ -811,6 +811,10 @@ struct rq {
  	/* Must be inspected within a rcu lock section */
  	struct cpuidle_state *idle_state;
  #endif
@@ -23429,7 +23429,7 @@
  };
  
  static inline int cpu_of(struct rq *rq)
-@@ -1358,6 +1362,7 @@ static inline void finish_lock_switch(st
+@@ -1352,6 +1356,7 @@ static inline void finish_lock_switch(st
  #define WF_SYNC		0x01		/* waker goes to sleep after wakeup */
  #define WF_FORK		0x02		/* child wakeup after fork */
  #define WF_MIGRATED	0x4		/* internal use, task got migrated */
@@ -23437,7 +23437,7 @@
  
  /*
   * To aid in avoiding the subversion of "niceness" due to uneven distribution
-@@ -1549,6 +1554,15 @@ extern void init_sched_fair_class(void);
+@@ -1543,6 +1548,15 @@ extern void init_sched_fair_class(void);
  extern void resched_curr(struct rq *rq);
  extern void resched_cpu(int cpu);
  
@@ -27642,7 +27642,7 @@
  	     (EVENT_FILE_FL_SOFT_DISABLED | EVENT_FILE_FL_FILTERED)) &&
  	    (entry = this_cpu_read(trace_buffered_event))) {
  		/* Try to use the per cpu buffer first */
-@@ -3350,14 +3362,17 @@ get_total_entries(struct trace_buffer *b
+@@ -3351,14 +3363,17 @@ get_total_entries(struct trace_buffer *b
  
  static void print_lat_help_header(struct seq_file *m)
  {
@@ -27668,7 +27668,7 @@
  }
  
  static void print_event_info(struct trace_buffer *buf, struct seq_file *m)
-@@ -3395,15 +3410,17 @@ static void print_func_help_header_irq(s
+@@ -3396,15 +3411,17 @@ static void print_func_help_header_irq(s
  		   tgid ? tgid_space : space);
  	seq_printf(m, "#                          %s / _----=> need-resched\n",
  		   tgid ? tgid_space : space);
@@ -27691,7 +27691,7 @@
  		   tgid ? "     |    " : space);
  }
  
-@@ -4562,6 +4579,9 @@ static const char readme_msg[] =
+@@ -4563,6 +4580,9 @@ static const char readme_msg[] =
  #ifdef CONFIG_X86_64
  	"     x86-tsc:   TSC cycle counter\n"
  #endif
@@ -27701,7 +27701,7 @@
  	"\n  trace_marker\t\t- Writes into this file writes into the kernel buffer\n"
  	"\n  trace_marker_raw\t\t- Writes into this file writes binary data into the kernel buffer\n"
  	"  tracing_cpumask\t- Limit which CPUs to trace\n"
-@@ -4738,8 +4758,9 @@ static const char readme_msg[] =
+@@ -4739,8 +4759,9 @@ static const char readme_msg[] =
  	"\t            .sym        display an address as a symbol\n"
  	"\t            .sym-offset display an address as a symbol and offset\n"
  	"\t            .execname   display a common_pid as a program name\n"
@@ -27713,7 +27713,7 @@
  	"\t    The 'pause' parameter can be used to pause an existing hist\n"
  	"\t    trigger or to start a hist trigger but not log any events\n"
  	"\t    until told to do so.  'continue' can be used to start or\n"
-@@ -6249,7 +6270,7 @@ static int tracing_clock_show(struct seq
+@@ -6250,7 +6271,7 @@ static int tracing_clock_show(struct seq
  	return 0;
  }
  
@@ -27722,7 +27722,7 @@
  {
  	int i;
  
-@@ -6329,6 +6350,71 @@ static int tracing_clock_open(struct ino
+@@ -6330,6 +6351,71 @@ static int tracing_clock_open(struct ino
  	return ret;
  }
  
@@ -27794,7 +27794,7 @@
  struct ftrace_buffer_info {
  	struct trace_iterator	iter;
  	void			*spare;
-@@ -6578,6 +6664,13 @@ static const struct file_operations trac
+@@ -6579,6 +6665,13 @@ static const struct file_operations trac
  	.write		= tracing_clock_write,
  };
  
@@ -27808,7 +27808,7 @@
  #ifdef CONFIG_TRACER_SNAPSHOT
  static const struct file_operations snapshot_fops = {
  	.open		= tracing_snapshot_open,
-@@ -7769,6 +7862,7 @@ static int instance_mkdir(const char *na
+@@ -7770,6 +7863,7 @@ static int instance_mkdir(const char *na
  
  	INIT_LIST_HEAD(&tr->systems);
  	INIT_LIST_HEAD(&tr->events);
@@ -27816,7 +27816,7 @@
  
  	if (allocate_trace_buffers(tr, trace_buf_size) < 0)
  		goto out_free_tr;
-@@ -7921,6 +8015,9 @@ init_tracer_tracefs(struct trace_array *
+@@ -7922,6 +8016,9 @@ init_tracer_tracefs(struct trace_array *
  	trace_create_file("tracing_on", 0644, d_tracer,
  			  tr, &rb_simple_fops);
  
@@ -27826,7 +27826,7 @@
  	create_trace_options_dir(tr);
  
  #if defined(CONFIG_TRACER_MAX_TRACE) || defined(CONFIG_HWLAT_TRACER)
-@@ -8328,6 +8425,92 @@ void ftrace_dump(enum ftrace_dump_mode o
+@@ -8329,6 +8426,92 @@ void ftrace_dump(enum ftrace_dump_mode o
  }
  EXPORT_SYMBOL_GPL(ftrace_dump);
  
@@ -27919,7 +27919,7 @@
  __init static int tracer_alloc_buffers(void)
  {
  	int ring_buf_size;
-@@ -8428,6 +8611,7 @@ __init static int tracer_alloc_buffers(v
+@@ -8429,6 +8612,7 @@ __init static int tracer_alloc_buffers(v
  
  	INIT_LIST_HEAD(&global_trace.systems);
  	INIT_LIST_HEAD(&global_trace.events);
@@ -27966,7 +27966,7 @@
  /*
   * The global tracer (top) should be the first trace array added,
   * but we check the flag anyway.
-@@ -1383,7 +1392,7 @@ __event_trigger_test_discard(struct trac
+@@ -1385,7 +1394,7 @@ __event_trigger_test_discard(struct trac
  	unsigned long eflags = file->flags;
  
  	if (eflags & EVENT_FILE_FL_TRIGGER_COND)
@@ -27975,7 +27975,7 @@
  
  	if (test_bit(EVENT_FILE_FL_SOFT_DISABLED_BIT, &file->flags) ||
  	    (unlikely(file->flags & EVENT_FILE_FL_FILTERED) &&
-@@ -1420,7 +1429,7 @@ event_trigger_unlock_commit(struct trace
+@@ -1422,7 +1431,7 @@ event_trigger_unlock_commit(struct trace
  		trace_buffer_unlock_commit(file->tr, buffer, event, irq_flags, pc);
  
  	if (tt)
@@ -27984,7 +27984,7 @@
  }
  
  /**
-@@ -1453,7 +1462,7 @@ event_trigger_unlock_commit_regs(struct
+@@ -1455,7 +1464,7 @@ event_trigger_unlock_commit_regs(struct
  						irq_flags, pc, regs);
  
  	if (tt)
@@ -27993,7 +27993,7 @@
  }
  
  #define FILTER_PRED_INVALID	((unsigned short)-1)
-@@ -1635,6 +1644,8 @@ extern void pause_named_trigger(struct e
+@@ -1637,6 +1646,8 @@ extern void pause_named_trigger(struct e
  extern void unpause_named_trigger(struct event_trigger_data *data);
  extern void set_named_trigger_data(struct event_trigger_data *data,
  				   struct event_trigger_data *named_data);
@@ -28002,7 +28002,7 @@
  extern int register_event_command(struct event_command *cmd);
  extern int unregister_event_command(struct event_command *cmd);
  extern int register_trigger_hist_enable_disable_cmds(void);
-@@ -1678,7 +1689,8 @@ extern int register_trigger_hist_enable_
+@@ -1680,7 +1691,8 @@ extern int register_trigger_hist_enable_
   */
  struct event_trigger_ops {
  	void			(*func)(struct event_trigger_data *data,
@@ -28012,7 +28012,7 @@
  	int			(*init)(struct event_trigger_ops *ops,
  					struct event_trigger_data *data);
  	void			(*free)(struct event_trigger_ops *ops,
-@@ -1845,6 +1857,13 @@ void trace_printk_start_comm(void);
+@@ -1847,6 +1859,13 @@ void trace_printk_start_comm(void);
  int trace_keep_overwrite(struct tracer *tracer, u32 mask, int set);
  int set_tracer_flag(struct trace_array *tr, unsigned int mask, int enabled);
  
@@ -34788,7 +34788,7 @@
  }
  
  /**
-@@ -4151,7 +4193,7 @@ void destroy_workqueue(struct workqueue_
+@@ -4158,7 +4200,7 @@ void destroy_workqueue(struct workqueue_
  		 * The base ref is never dropped on per-cpu pwqs.  Directly
  		 * schedule RCU free.
  		 */
@@ -34797,7 +34797,7 @@
  	} else {
  		/*
  		 * We're the sole accessor of @wq at this point.  Directly
-@@ -4261,7 +4303,8 @@ bool workqueue_congested(int cpu, struct
+@@ -4268,7 +4310,8 @@ bool workqueue_congested(int cpu, struct
  	struct pool_workqueue *pwq;
  	bool ret;
  
@@ -34807,7 +34807,7 @@
  
  	if (cpu == WORK_CPU_UNBOUND)
  		cpu = smp_processor_id();
-@@ -4272,7 +4315,8 @@ bool workqueue_congested(int cpu, struct
+@@ -4279,7 +4322,8 @@ bool workqueue_congested(int cpu, struct
  		pwq = unbound_pwq_by_node(wq, cpu_to_node(cpu));
  
  	ret = !list_empty(&pwq->delayed_works);
@@ -34817,7 +34817,7 @@
  
  	return ret;
  }
-@@ -4298,15 +4342,15 @@ unsigned int work_busy(struct work_struc
+@@ -4305,15 +4349,15 @@ unsigned int work_busy(struct work_struc
  	if (work_pending(work))
  		ret |= WORK_BUSY_PENDING;
  
@@ -34837,7 +34837,7 @@
  
  	return ret;
  }
-@@ -4496,7 +4540,7 @@ void show_workqueue_state(void)
+@@ -4503,7 +4547,7 @@ void show_workqueue_state(void)
  	unsigned long flags;
  	int pi;
  
@@ -34846,7 +34846,7 @@
  
  	pr_info("Showing busy workqueues and worker pools:\n");
  
-@@ -4561,7 +4605,7 @@ void show_workqueue_state(void)
+@@ -4568,7 +4612,7 @@ void show_workqueue_state(void)
  		touch_nmi_watchdog();
  	}
  
@@ -34855,7 +34855,7 @@
  }
  
  /*
-@@ -4922,16 +4966,16 @@ bool freeze_workqueues_busy(void)
+@@ -4929,16 +4973,16 @@ bool freeze_workqueues_busy(void)
  		 * nr_active is monotonically decreasing.  It's safe
  		 * to peek without lock.
  		 */
@@ -34875,7 +34875,7 @@
  	}
  out_unlock:
  	mutex_unlock(&wq_pool_mutex);
-@@ -5121,7 +5165,8 @@ static ssize_t wq_pool_ids_show(struct d
+@@ -5128,7 +5172,8 @@ static ssize_t wq_pool_ids_show(struct d
  	const char *delim = "";
  	int node, written = 0;
  
@@ -34885,7 +34885,7 @@
  	for_each_node(node) {
  		written += scnprintf(buf + written, PAGE_SIZE - written,
  				     "%s%d:%d", delim, node,
-@@ -5129,7 +5174,8 @@ static ssize_t wq_pool_ids_show(struct d
+@@ -5136,7 +5181,8 @@ static ssize_t wq_pool_ids_show(struct d
  		delim = " ";
  	}
  	written += scnprintf(buf + written, PAGE_SIZE - written, "\n");
@@ -36212,7 +36212,7 @@
  /* Whether legacy memory+swap accounting is active */
  static bool do_memsw_account(void)
  {
-@@ -1850,7 +1853,7 @@ static void drain_all_stock(struct mem_c
+@@ -1816,7 +1819,7 @@ static void drain_all_stock(struct mem_c
  	 * as well as workers from this path always operate on the local
  	 * per-cpu data. CPU up doesn't touch memcg_stock at all.
  	 */
@@ -36221,7 +36221,7 @@
  	for_each_online_cpu(cpu) {
  		struct memcg_stock_pcp *stock = &per_cpu(memcg_stock, cpu);
  		struct mem_cgroup *memcg;
-@@ -1870,7 +1873,7 @@ static void drain_all_stock(struct mem_c
+@@ -1836,7 +1839,7 @@ static void drain_all_stock(struct mem_c
  		}
  		css_put(&memcg->css);
  	}
@@ -36230,7 +36230,7 @@
  	mutex_unlock(&percpu_charge_mutex);
  }
  
-@@ -4669,12 +4672,12 @@ static int mem_cgroup_move_account(struc
+@@ -4661,12 +4664,12 @@ static int mem_cgroup_move_account(struc
  
  	ret = 0;
  
@@ -36245,7 +36245,7 @@
  out_unlock:
  	unlock_page(page);
  out:
-@@ -5617,10 +5620,10 @@ void mem_cgroup_commit_charge(struct pag
+@@ -5609,10 +5612,10 @@ void mem_cgroup_commit_charge(struct pag
  
  	commit_charge(page, memcg, lrucare);
  
@@ -36258,25 +36258,25 @@
  
  	if (do_memsw_account() && PageSwapCache(page)) {
  		swp_entry_t entry = { .val = page_private(page) };
-@@ -5689,7 +5692,7 @@ static void uncharge_batch(const struct
+@@ -5681,7 +5684,7 @@ static void uncharge_batch(const struct
  		memcg_oom_recover(ug->memcg);
  	}
  
 -	local_irq_save(flags);
 +	local_lock_irqsave(event_lock, flags);
- 	__this_cpu_sub(ug->memcg->stat->count[MEMCG_RSS], ug->nr_anon);
- 	__this_cpu_sub(ug->memcg->stat->count[MEMCG_CACHE], ug->nr_file);
- 	__this_cpu_sub(ug->memcg->stat->count[MEMCG_RSS_HUGE], ug->nr_huge);
-@@ -5697,7 +5700,7 @@ static void uncharge_batch(const struct
- 	__this_cpu_add(ug->memcg->stat->events[PGPGOUT], ug->pgpgout);
- 	__this_cpu_add(ug->memcg->stat->nr_page_events, nr_pages);
+ 	__mod_memcg_state(ug->memcg, MEMCG_RSS, -ug->nr_anon);
+ 	__mod_memcg_state(ug->memcg, MEMCG_CACHE, -ug->nr_file);
+ 	__mod_memcg_state(ug->memcg, MEMCG_RSS_HUGE, -ug->nr_huge);
+@@ -5689,7 +5692,7 @@ static void uncharge_batch(const struct
+ 	__count_memcg_events(ug->memcg, PGPGOUT, ug->pgpgout);
+ 	__this_cpu_add(ug->memcg->stat_cpu->nr_page_events, nr_pages);
  	memcg_check_events(ug->memcg, ug->dummy_page);
 -	local_irq_restore(flags);
 +	local_unlock_irqrestore(event_lock, flags);
  
  	if (!mem_cgroup_is_root(ug->memcg))
  		css_put_many(&ug->memcg->css, nr_pages);
-@@ -5860,10 +5863,10 @@ void mem_cgroup_migrate(struct page *old
+@@ -5852,10 +5855,10 @@ void mem_cgroup_migrate(struct page *old
  
  	commit_charge(newpage, memcg, false);
  
@@ -36289,7 +36289,7 @@
  }
  
  DEFINE_STATIC_KEY_FALSE(memcg_sockets_enabled_key);
-@@ -6045,6 +6048,7 @@ void mem_cgroup_swapout(struct page *pag
+@@ -6037,6 +6040,7 @@ void mem_cgroup_swapout(struct page *pag
  	struct mem_cgroup *memcg, *swap_memcg;
  	unsigned int nr_entries;
  	unsigned short oldid;
@@ -36297,7 +36297,7 @@
  
  	VM_BUG_ON_PAGE(PageLRU(page), page);
  	VM_BUG_ON_PAGE(page_count(page), page);
-@@ -6090,10 +6094,14 @@ void mem_cgroup_swapout(struct page *pag
+@@ -6082,10 +6086,14 @@ void mem_cgroup_swapout(struct page *pag
  	 * important here to have the interrupts disabled because it is the
  	 * only synchronisation we have for udpating the per-CPU variables.
  	 */
